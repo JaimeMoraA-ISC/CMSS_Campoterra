@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Campoterra CMMS | Dashboard</title>
+    <!-- Importamos Bootstrap 5 para el diseño profesional -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Importamos FontAwesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f4f7f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* --- ESTILOS DEL MENÚ LATERAL (SIDEBAR) --- */
+        .sidebar {
+            height: 100vh;
+            width: 260px;
+            background-color: #0b1528; /* Azul corporativo muy oscuro */
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-top: 20px;
+            color: white;
+            z-index: 1000;
+        }
+        .sidebar-brand {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+        .sidebar-brand i { font-size: 1.8rem; margin-right: 10px; }
+        .sidebar a {
+            padding: 15px 25px;
+            text-decoration: none;
+            font-size: 15px;
+            color: #a0aabf;
+            display: block;
+            transition: 0.3s;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            color: white;
+            background-color: #1a2639;
+            border-left: 4px solid #3498db;
+        }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+
+        /* --- ESTILOS DEL ÁREA PRINCIPAL --- */
+        .main-content {
+            margin-left: 260px; /* Dejamos espacio para el sidebar */
+            padding-bottom: 40px;
+        }
+        
+        /* --- ESTILOS DE LA BARRA SUPERIOR (TOPBAR) --- */
+        .topbar {
+            background-color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .search-bar {
+            background-color: #f0f2f5;
+            border-radius: 20px;
+            padding: 8px 20px;
+            width: 350px;
+            display: flex;
+            align-items: center;
+        }
+        .search-bar input {
+            border: none;
+            background: transparent;
+            outline: none;
+            width: 100%;
+            margin-left: 10px;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-profile img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ LATERAL (SIDEBAR) -->
+    <div class="sidebar">
+      <div class="sidebar-brand" style="line-height: 1.2;">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+        <img src="logo.png" alt="Logo Campoterra" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 2px solid #3498db;">
+        <span>CAMPOTERRA</span>
+    </div>
+    <small style="font-size: 12px; font-weight: normal; color: #a0aabf; display: block;">CONGELADORA</small>
+</div>
+        <a href="#" class="active"><i class="fas fa-home"></i> Panel de Inicio</a>
+        <a href="bitacoras.html"><i class="fas fa-clipboard-list"></i> Historial de Bitácoras</a>
+        <a href="maquinaria.html"><i class="fas fa-box"></i> Catálogo de Maquinaria</a>
+        <a href="personal.html"><i class="fas fa-users"></i> Control de Personal</a>
+        <a href="reportes.html"><i class="fas fa-file-alt"></i> Reportes y Descargas</a>
+        
+        <div style="position: absolute; bottom: 20px; width: 100%;">
+            <a href="login.html"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+        
+        <!-- BARRA SUPERIOR (TOPBAR) -->
+        <div class="topbar">
+            <div class="search-bar">
+                <i class="fas fa-search" style="color: #888;"></i>
+                <input type="text" id="inputBusqueda" placeholder="Buscar máquina, técnico o actividad...">
+            </div>
+            
+            
+            <div class="user-profile">
+                <i class="fas fa-bell" style="font-size: 1.2rem; color: #555; position: relative;">
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                        3
+                    </span>
+                </i>
+                <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
+                <div style="line-height: 1.2;">
+                    <strong>Jorge Ríos</strong><br>
+                    <small style="color: #888;">Jefe de Mantenimiento</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE INDICADORES (KPIs) -->
+        <div class="container-fluid px-4 mb-4">
+            <div class="row g-3">
+                
+                <!-- Tarjeta 1: Mantenimientos Hoy -->
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">MANTENIMIENTOS HOY</h6>
+                                <h3 class="mb-0 fw-bold" id="kpi-hoy">0</h3>
+                                <small class="text-muted">Registros completados</small>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+                                <i class="fas fa-chart-line fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tarjeta 2: Alertas Críticas -->
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">ALERTAS CRÍTICAS</h6>
+                                <h3 class="mb-0 fw-bold text-danger" id="kpi-alertas">0</h3>
+                                <small class="text-muted">Incidencias no resueltas</small>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger">
+                                <i class="fas fa-exclamation-triangle fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta 3: Preventivos -->
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">PREVENTIVOS</h6>
+                                <h3 class="mb-0 fw-bold text-success" id="kpi-preventivos">0%</h3>
+                                <small class="text-muted">Tareas cumplidas hoy</small>
+                            </div>
+                            <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success">
+                                <i class="fas fa-shield-alt fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta 4: Eficiencia -->
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="w-100">
+                                <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">EFICIENCIA DEL TURNO</h6>
+                                <div class="d-flex justify-content-between align-items-end mb-1">
+                                    <h3 class="mb-0 fw-bold text-info">85%</h3>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-info" style="width: 85%"></div>
+                                </div>
+                            </div>
+                            <div class="bg-info bg-opacity-10 p-3 rounded-circle text-info ms-3">
+                                <i class="fas fa-tachometer-alt fs-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE GRÁFICAS -->
+        <div class="container-fluid px-4 mb-4">
+            <div class="row g-3">
+                
+                <!-- Gráfica de Dona (Izquierda) -->
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <h6 class="text-muted mb-3" style="font-size: 12px; font-weight: bold;">DISTRIBUCIÓN DE TRABAJO</h6>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="graficaDona"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfica de Barras (Derecha) -->
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <h6 class="text-muted mb-3" style="font-size: 12px; font-weight: bold;">INCIDENCIAS POR EQUIPO</h6>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="graficaBarras"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE LA TABLA -->
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-secondary"><strong>ACTIVIDADES RECIENTES</strong></h5>
+                <button id="btnExportar" class="btn btn-outline-success">
+                    <i class="fas fa-file-excel me-2"></i> Exportar Reporte
+                </button>
+            </div>
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <!-- Usamos clases de Bootstrap para la tabla -->
+                    <table class="table table-hover mb-0" id="tabla-bitacoras">
+                        <thead class="table-light">
+                            <tr>
+                                <th>FECHA / HORA</th>
+                                <th>EQUIPO</th>
+                                <th>RESPONSABLE</th>
+                                <th>TIPO</th>
+                                <th>ACTIVIDAD REALIZADA</th>
+                                <th>REPUESTOS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se inyectarán aquí por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+  <script>
+       async function cargarBitacoras() {
+            try {
+                const respuesta = await fetch('http://localhost:8000/api/bitacoras/');
+                if (respuesta.ok) {
+                    const bitacoras = await respuesta.json();
+                    
+                    // ==========================================
+                    // LÓGICA PARA LOS INDICADORES (KPIs)
+                    // ==========================================
+                    const totalMantenimientos = bitacoras.length;
+                    document.getElementById('kpi-hoy').innerText = totalMantenimientos;
+
+                    let preventivos = 0;
+                    let correctivos = 0;
+
+                    bitacoras.forEach(b => {
+                        // ACTUALIZADO: b.tipo_mantenimiento
+                        if(b.tipo_mantenimiento === 'Preventivo') preventivos++;
+                        if(b.tipo_mantenimiento === 'Correctivo') correctivos++;
+                    });
+
+                    // Mostramos los correctivos como alertas críticas
+                    document.getElementById('kpi-alertas').innerText = correctivos;
+
+                    // Calculamos el porcentaje de preventivos
+                    let porcentajePrev = 0;
+                    if(totalMantenimientos > 0) {
+                        porcentajePrev = Math.round((preventivos / totalMantenimientos) * 100);
+                    }
+                    document.getElementById('kpi-preventivos').innerText = porcentajePrev + '%';
+                    // ==========================================
+                    // LÓGICA PARA LA GRÁFICA DE DONA
+                    // ==========================================
+                    const ctxDona = document.getElementById('graficaDona').getContext('2d');
+                    
+                    // Destruimos la gráfica anterior si existe para que no se encimen al recargar
+                    if(window.miGraficaDona) window.miGraficaDona.destroy();
+
+                    window.miGraficaDona = new Chart(ctxDona, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Preventivo', 'Correctivo'],
+                            datasets: [{
+                                data: [preventivos, correctivos],
+                                backgroundColor: ['#198754', '#dc3545'], // Verde y Rojo de Bootstrap
+                                borderWidth: 0, // Sin bordes para un look más limpio
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { font: { size: 13 } }
+                                }
+                            },
+                            cutout: '75%' // Hace que la dona sea más delgada y elegante
+                        }
+                    });
+                    // ==========================================
+                    // LÓGICA PARA LA GRÁFICA DE BARRAS
+                    // ==========================================
+                    // 1. Agrupamos y contamos las incidencias por equipo
+                    const conteoEquipos = {};
+                    bitacoras.forEach(b => {
+                        // ACTUALIZADO: b.nombre_equipo
+                        if (conteoEquipos[b.nombre_equipo]) {
+                            conteoEquipos[b.nombre_equipo]++;
+                        } else {
+                            conteoEquipos[b.nombre_equipo] = 1;
+                        }
+                    });
+
+                    // 2. Extraemos los nombres (etiquetas) y las cantidades (datos)
+                    const nombresEquipos = Object.keys(conteoEquipos);
+                    const cantidadIncidencias = Object.values(conteoEquipos);
+
+                    const ctxBarras = document.getElementById('graficaBarras').getContext('2d');
+                    
+                    if(window.miGraficaBarras) window.miGraficaBarras.destroy();
+
+                    window.miGraficaBarras = new Chart(ctxBarras, {
+                        type: 'bar', // Cambiamos a gráfica de barras
+                        data: {
+                            labels: nombresEquipos,
+                            datasets: [{
+                                label: 'Número de Incidencias',
+                                data: cantidadIncidencias,
+                                backgroundColor: '#dc3545', // Rojo alerta
+                                borderRadius: 4 // Bordes redondeados en las barras
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y', // Convierte las barras verticales a horizontales
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false } // Ocultamos la leyenda porque es obvio
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    ticks: { stepSize: 1 } // Para que no muestre decimales de incidencias
+                                },
+                                y: {
+                                    grid: { display: false } // Quitamos las líneas horizontales para limpiar el diseño
+                                }
+                            }
+                        }
+                    });
+                    // ==========================================
+
+                    // LÓGICA PARA LLENAR LA TABLA
+                    const cuerpoTabla = document.querySelector('#tabla-bitacoras tbody');
+                    cuerpoTabla.innerHTML = ''; 
+
+                    bitacoras.forEach(bitacora => {
+                        const fila = document.createElement('tr');
+                        
+                        // ACTUALIZADO: Variables alineadas con FastAPI
+                        fila.innerHTML = `
+                            <td class="align-middle">${new Date(bitacora.fecha_registro).toLocaleString('es-MX')}</td>
+                            <td class="align-middle"><i class="fas fa-hdd text-secondary me-2"></i> ${bitacora.nombre_equipo}</td>
+                            <td class="align-middle text-primary"><i class="far fa-user me-2"></i> ${bitacora.nombre_tecnico}</td>
+                            <td class="align-middle">
+                                <span class="badge rounded-pill ${bitacora.tipo_mantenimiento === 'Preventivo' ? 'bg-success' : 'bg-danger'}" style="padding: 8px 12px; font-weight: 500; letter-spacing: 0.5px;">
+                                    ${bitacora.tipo_mantenimiento}
+                                </span>
+                            </td>
+                            <td class="align-middle">${bitacora.descripcion}</td>
+                            <td class="align-middle">${bitacora.detalles_repuestos ? bitacora.detalles_repuestos : '<span class="text-muted">Ninguno</span>'}</td>
+                        `;
+                        cuerpoTabla.appendChild(fila);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar los datos:", error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarBitacoras);
+
+        // ==========================================
+        // LÓGICA DEL BUSCADOR EN TIEMPO REAL
+        // ==========================================
+        document.getElementById('inputBusqueda').addEventListener('keyup', function() {
+            const textoBusqueda = this.value.toLowerCase();
+            const filasTabla = document.querySelectorAll('#tabla-bitacoras tbody tr');
+
+            filasTabla.forEach(fila => {
+                // Obtenemos todo el texto de la fila (máquina, técnico, falla, etc.)
+                const contenidoFila = fila.textContent.toLowerCase();
+                
+                // Si el texto buscado está en la fila, la mostramos; si no, la ocultamos
+                if (contenidoFila.includes(textoBusqueda)) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        });
+
+        // ==========================================
+        // LÓGICA PARA EXPORTAR A EXCEL
+        // ==========================================
+        document.getElementById('btnExportar').addEventListener('click', function() {
+            // Ubicamos la tabla en el HTML
+            const tabla = document.getElementById('tabla-bitacoras');
+            
+            // La librería convierte mágicamente la tabla HTML a formato Excel
+            const libroExcel = XLSX.utils.table_to_book(tabla, {sheet: "Reporte de Mantenimiento"});
+            
+            // Forzamos la descarga del archivo con un nombre profesional
+            XLSX.writeFile(libroExcel, 'Reporte_Diario_Campoterra.xlsx');
+        });
+    </script>
+
+    <!-- Script de Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script de Chart.js para las gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Script para exportar a Excel (SheetJS) -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</body>
+</html>

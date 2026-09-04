@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Catálogo de Maquinaria | Campoterra CMMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        /* --- ESTILOS DEL MENÚ LATERAL (Mismos del Dashboard) --- */
+        .sidebar { height: 100vh; width: 260px; background-color: #0b1528; position: fixed; top: 0; left: 0; padding-top: 20px; color: white; z-index: 1000; }
+        .sidebar-brand { font-size: 1.2rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .sidebar-brand i { font-size: 1.8rem; margin-right: 10px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 15px; color: #a0aabf; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { color: white; background-color: #1a2639; border-left: 4px solid #3498db; }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+        .main-content { margin-left: 260px; padding-bottom: 40px; }
+        
+        /* --- ESTILOS DE LA BARRA SUPERIOR --- */
+        .topbar { background-color: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .search-bar { background-color: #f0f2f5; border-radius: 20px; padding: 8px 20px; width: 350px; display: flex; align-items: center; }
+        .search-bar input { border: none; background: transparent; outline: none; width: 100%; margin-left: 10px; }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ LATERAL -->
+    <div class="sidebar">
+       <div class="sidebar-brand" style="line-height: 1.2;">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+        <img src="logo.png" alt="Logo Campoterra" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 2px solid #3498db;">
+        <span>CAMPOTERRA</span>
+    </div>
+    <small style="font-size: 12px; font-weight: normal; color: #a0aabf; display: block;">CONGELADORA</small>
+</div>
+        <a href="dashboard.html"><i class="fas fa-home"></i> Panel de Inicio</a>
+        <a href="bitacoras.html"><i class="fas fa-clipboard-list"></i> Historial de Bitácoras</a>
+        <a href="maquinaria.html"class="active"><i class="fas fa-box"></i> Catálogo de Maquinaria</a>
+        <a href="personal.html"><i class="fas fa-users"></i> Control de Personal</a>
+        <a href="reportes.html"><i class="fas fa-file-alt"></i> Reportes y Descargas</a>
+
+        <div style="position: absolute; bottom: 20px; width: 100%;">
+            <a href="login.html"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+        
+        <!-- BARRA SUPERIOR -->
+        <div class="topbar">
+            <div class="search-bar">
+                <i class="fas fa-search" style="color: #888;"></i>
+                <input type="text" id="buscadorEquipos" placeholder="Buscar equipo por nombre o área...">
+            </div>
+            
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
+                <div style="line-height: 1.2;">
+                    <strong>Jorge Ríos</strong><br>
+                    <small style="color: #888;">Jefe de Mantenimiento</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DEL CATÁLOGO -->
+        <div class="container-fluid px-4">
+            
+            <!-- Cabecera y Botón Nuevo -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-secondary"><strong>ADMINISTRACIÓN DE MAQUINARIA</strong></h5>
+                <!-- Este botón abre la ventana emergente -->
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoEquipo">
+                    <i class="fas fa-plus-circle me-2"></i> Registrar Equipo
+                </button>
+            </div>
+            
+            <!-- Tabla de Equipos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0" id="tabla-equipos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>NOMBRE DEL EQUIPO</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Llenado por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENTANA EMERGENTE (MODAL) PARA REGISTRAR EQUIPO -->
+    <div class="modal fade" id="modalNuevoEquipo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #0b1528;">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i> Registrar Nueva Máquina</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                   <form id="formNuevoEquipo">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Código Interno</label>
+                            <input type="text" class="form-control" id="codigoEquipo" placeholder="Ej: LVM-01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre del Equipo</label>
+                            <input type="text" class="form-control" id="nombreEquipo" placeholder="Ej: Lavadora de Mango" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Área de Ubicación</label>
+                            <input type="text" class="form-control" id="areaEquipo" placeholder="Ej: Área de Lavado" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEquipo()">Guardar Equipo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- VENTANA EMERGENTE (MODAL) PARA EDITAR EQUIPO -->
+    <div class="modal fade" id="modalEditarEquipo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #0b1528;">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i> Editar Máquina</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarEquipo">
+                        <!-- Campo oculto para guardar el ID que estamos editando -->
+                        <input type="hidden" id="editIdEquipo">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Código Interno</label>
+                            <input type="text" class="form-control" id="editCodigoEquipo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre del Equipo</label>
+                            <input type="text" class="form-control" id="editNombreEquipo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Área de Ubicación</label>
+                            <input type="text" class="form-control" id="editAreaEquipo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Estado del Equipo</label>
+                            <select class="form-select" id="editEstadoEquipo" required>
+                                <option value="Operativo">Operativo</option>
+                                <option value="En Mantenimiento">En Mantenimiento</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicionEquipo()">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para cargar los equipos desde MySQL
+        async function cargarEquipos() {
+            try {
+                // Suponiendo que tienes esta ruta GET en tu main.py
+                const respuesta = await fetch('http://localhost:8000/api/equipos/');
+                if (respuesta.ok) {
+                    const equipos = await respuesta.json();
+                    const cuerpoTabla = document.querySelector('#tabla-equipos tbody');
+                    cuerpoTabla.innerHTML = ''; 
+
+                    equipos.forEach(equipo => {
+                        const fila = document.createElement('tr');
+                        // Asumimos que FastAPI manda 'id_equipo' y 'nombre'
+                        // Asignamos un color de Bootstrap dependiendo del estado del ENUM
+                        let colorBadge = 'bg-success'; // Verde por defecto
+                        if (equipo.estado === 'En Mantenimiento') colorBadge = 'bg-warning text-dark'; // Amarillo
+                        if (equipo.estado === 'Inactivo') colorBadge = 'bg-secondary'; // Gris
+
+                        fila.innerHTML = `
+                            <td class="align-middle fw-bold">#${equipo.id_equipo}</td>
+                            <td class="align-middle"><i class="fas fa-hdd text-secondary me-2"></i> ${equipo.nombre}</td>
+                            <td class="align-middle"><span class="badge ${colorBadge} rounded-pill">${equipo.estado}</span></td>
+                            <td class="align-middle">
+                                <!-- Le pasamos el estado actual como 5to parámetro -->
+                                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditar(${equipo.id_equipo}, '${equipo.codigo_interno}', '${equipo.nombre}', '${equipo.area_ubicacion}', '${equipo.estado}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="borrarEquipo(${equipo.id_equipo})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        cuerpoTabla.appendChild(fila);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar equipos:", error);
+            }
+        }
+
+        // Función para enviar el nuevo equipo al backend
+       async function guardarEquipo() {
+            // Recolectamos los 3 valores
+            const codigo = document.getElementById('codigoEquipo').value;
+            const nombre = document.getElementById('nombreEquipo').value;
+            const area = document.getElementById('areaEquipo').value;
+            
+            if(!codigo || !nombre || !area) {
+                alert("Por favor, llena todos los campos obligatorios.");
+                return;
+            }
+
+            try {
+                const respuesta = await fetch('http://localhost:8000/api/equipos/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Armamos el JSON con los nombres exactos de tu EquipoCreate
+                    body: JSON.stringify({ 
+                        codigo_interno: codigo,
+                        nombre: nombre,
+                        area_ubicacion: area
+                    })
+                });
+
+                if (respuesta.ok) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalNuevoEquipo'));
+                    modal.hide();
+                    document.getElementById('formNuevoEquipo').reset();
+                    cargarEquipos(); // Recarga la tabla
+                } else {
+                    alert("Error al guardar el equipo en la base de datos.");
+                }
+            } catch (error) {
+                console.error("Error en POST:", error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarEquipos);
+
+      
+        // LÓGICA DEL BUSCADOR EN TIEMPO REAL
+        document.getElementById('buscadorEquipos').addEventListener('keyup', function() {
+            const textoBusqueda = this.value.toLowerCase();
+            const filasTabla = document.querySelectorAll('#tabla-equipos tbody tr');
+
+            filasTabla.forEach(fila => {
+                const contenidoFila = fila.textContent.toLowerCase();
+                fila.style.display = contenidoFila.includes(textoBusqueda) ? '' : 'none';
+            });
+        });
+
+        
+        // LÓGICA PARA ELIMINAR EQUIPO
+        
+        async function borrarEquipo(id) {
+            // Confirmación de seguridad antes de borrar
+            if(confirm("¿Estás seguro de que deseas eliminar este equipo del sistema?")) {
+                try {
+                    const respuesta = await fetch(`http://localhost:8000/api/equipos/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (respuesta.ok) {
+                        cargarEquipos(); // Recargamos la tabla al instante para que desaparezca
+                    } else {
+                        alert("Error al eliminar el equipo.");
+                    }
+                } catch (error) {
+                    console.error("Error en DELETE:", error);
+                }
+            }
+        }
+
+        // ==========================================
+        // LÓGICA PARA EDITAR EQUIPO
+        // ==========================================
+       function abrirModalEditar(id, codigo, nombre, area, estado) {
+            document.getElementById('editIdEquipo').value = id;
+            document.getElementById('editCodigoEquipo').value = codigo;
+            document.getElementById('editNombreEquipo').value = nombre;
+            document.getElementById('editAreaEquipo').value = area;
+            document.getElementById('editEstadoEquipo').value = estado; // Asignamos el estado al Select
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarEquipo'));
+            modal.show();
+        }
+
+        async function guardarEdicionEquipo() {
+            const id = document.getElementById('editIdEquipo').value;
+            const codigo = document.getElementById('editCodigoEquipo').value;
+            const nombre = document.getElementById('editNombreEquipo').value;
+            const area = document.getElementById('editAreaEquipo').value;
+            const estado = document.getElementById('editEstadoEquipo').value; // Capturamos el Select
+
+            try {
+                const respuesta = await fetch(`http://localhost:8000/api/equipos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        codigo_interno: codigo,
+                        nombre: nombre,
+                        area_ubicacion: area,
+                        estado: estado // Lo enviamos a FastAPI
+                    })
+                });
+
+                if (respuesta.ok) {
+                    const modalEl = document.getElementById('modalEditarEquipo');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    cargarEquipos();
+                } else {
+                    alert("Error al actualizar el equipo.");
+                }
+            } catch (error) {
+                console.error("Error en PUT:", error);
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

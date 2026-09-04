@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Control de Personal | Campoterra CMMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        /* --- ESTILOS DEL MENÚ LATERAL --- */
+        .sidebar { height: 100vh; width: 260px; background-color: #0b1528; position: fixed; top: 0; left: 0; padding-top: 20px; color: white; z-index: 1000; }
+        .sidebar-brand { font-size: 1.2rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .sidebar-brand i { font-size: 1.8rem; margin-right: 10px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 15px; color: #a0aabf; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { color: white; background-color: #1a2639; border-left: 4px solid #3498db; }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+        .main-content { margin-left: 260px; padding-bottom: 40px; }
+        
+        /* --- ESTILOS DE LA BARRA SUPERIOR --- */
+        .topbar { background-color: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .search-bar { background-color: #f0f2f5; border-radius: 20px; padding: 8px 20px; width: 350px; display: flex; align-items: center; }
+        .search-bar input { border: none; background: transparent; outline: none; width: 100%; margin-left: 10px; }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ LATERAL -->
+    <div class="sidebar">
+        <div class="sidebar-brand" style="line-height: 1.2;">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+        <img src="logo.png" alt="Logo Campoterra" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 2px solid #3498db;">
+        <span>CAMPOTERRA</span>
+    </div>
+    <small style="font-size: 12px; font-weight: normal; color: #a0aabf; display: block;">CONGELADORA</small>
+</div>
+        <a href="dashboard.html"><i class="fas fa-home"></i> Panel de Inicio</a>
+        <a href="bitacoras.html"><i class="fas fa-clipboard-list"></i> Historial de Bitácoras</a>
+        <a href="maquinaria.html"><i class="fas fa-box"></i> Catálogo de Maquinaria</a>
+        <a href="personal.html" class="active"><i class="fas fa-users"></i> Control de Personal</a>
+        <a href="reportes.html"><i class="fas fa-file-alt"></i> Reportes y Descargas</a>
+        
+        <div style="position: absolute; bottom: 20px; width: 100%;">
+            <a href="login.html"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+        
+        <!-- BARRA SUPERIOR -->
+        <div class="topbar">
+            <div class="search-bar">
+                <i class="fas fa-search" style="color: #888;"></i>
+                <input type="text" id="buscadorPersonal" placeholder="Buscar técnico por nombre...">
+            </div>
+            
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
+                <div style="line-height: 1.2;">
+                    <strong>Jorge Ríos</strong><br>
+                    <small style="color: #888;">Jefe de Mantenimiento</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DEL CATÁLOGO -->
+        <div class="container-fluid px-4">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 text-secondary"><strong>DIRECTORIO DE TÉCNICOS</strong></h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoTecnico">
+                    <i class="fas fa-user-plus me-2"></i> Registrar Técnico
+                </button>
+            </div>
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0" id="tabla-personal">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>NOMBRE COMPLETO</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Llenado por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO TÉCNICO -->
+    <div class="modal fade" id="modalNuevoTecnico" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #0b1528;">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i> Nuevo Técnico</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNuevoTecnico">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre Completo</label>
+                            <input type="text" class="form-control" id="nombreTecnico" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarTecnico()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR TÉCNICO -->
+    <div class="modal fade" id="modalEditarTecnico" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header text-white" style="background-color: #0b1528;">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i> Editar Técnico</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarTecnico">
+                        <input type="hidden" id="editIdTecnico">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre Completo</label>
+                            <input type="text" class="form-control" id="editNombreTecnico" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Estado</label>
+                            <select class="form-select" id="editEstadoTecnico" required>
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicionTecnico()">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // LÓGICA DE BÚSQUEDA
+        // ==========================================
+        document.getElementById('buscadorPersonal').addEventListener('keyup', function() {
+            const textoBusqueda = this.value.toLowerCase();
+            const filasTabla = document.querySelectorAll('#tabla-personal tbody tr');
+
+            filasTabla.forEach(fila => {
+                const contenidoFila = fila.textContent.toLowerCase();
+                fila.style.display = contenidoFila.includes(textoBusqueda) ? '' : 'none';
+            });
+        });
+
+        // ==========================================
+        // CARGAR DATOS
+        // ==========================================
+        async function cargarTecnicos() {
+            try {
+                const respuesta = await fetch('http://localhost:8000/api/tecnicos/');
+                if (respuesta.ok) {
+                    const tecnicos = await respuesta.json();
+                    const cuerpoTabla = document.querySelector('#tabla-personal tbody');
+                    cuerpoTabla.innerHTML = ''; 
+
+                    tecnicos.forEach(tecnico => {
+                        let colorBadge = tecnico.estado === 'Activo' ? 'bg-success' : 'bg-secondary';
+
+                        const fila = document.createElement('tr');
+                        fila.innerHTML = `
+                            <td class="align-middle fw-bold">#${tecnico.id_tecnico}</td>
+                            <td class="align-middle"><i class="far fa-user text-primary me-2"></i> ${tecnico.nombre}</td>
+                            <td class="align-middle"><span class="badge ${colorBadge} rounded-pill">${tecnico.estado || 'Activo'}</span></td>
+                           <td class="align-middle">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalEditarTecnico(${tecnico.id_tecnico}, '${tecnico.nombre}', '${tecnico.estado || 'Activo'}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="borrarTecnico(${tecnico.id_tecnico})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        cuerpoTabla.appendChild(fila);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar personal:", error);
+            }
+        }
+
+        // ==========================================
+        // GUARDAR NUEVO TÉCNICO
+        // ==========================================
+        async function guardarTecnico() {
+            const nombre = document.getElementById('nombreTecnico').value;
+            
+            if(!nombre) {
+                alert("Por favor, ingresa el nombre.");
+                return;
+            }
+
+            try {
+                const respuesta = await fetch('http://localhost:8000/api/tecnicos/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        nombre: nombre,
+                        estado: "Activo"
+                    })
+                });
+
+                if (respuesta.ok) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalNuevoTecnico'));
+                    modal.hide();
+                    document.getElementById('formNuevoTecnico').reset();
+                    cargarTecnicos();
+                } else {
+                    alert("Error al guardar el técnico.");
+                }
+            } catch (error) {
+                console.error("Error en POST:", error);
+            }
+        }
+
+        // ==========================================
+        // ELIMINAR TÉCNICO
+        // ==========================================
+        async function borrarTecnico(id) {
+            if(confirm("¿Estás seguro de que deseas eliminar este registro?")) {
+                try {
+                    const respuesta = await fetch(`http://localhost:8000/api/tecnicos/${id}`, { method: 'DELETE' });
+                    if (respuesta.ok) cargarTecnicos();
+                } catch (error) {
+                    console.error("Error en DELETE:", error);
+                }
+            }
+        }
+
+        // ==========================================
+        // LÓGICA PARA EDITAR TÉCNICO
+        // ==========================================
+        function abrirModalEditarTecnico(id, nombre, estado) {
+            document.getElementById('editIdTecnico').value = id;
+            document.getElementById('editNombreTecnico').value = nombre;
+            document.getElementById('editEstadoTecnico').value = estado;
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarTecnico'));
+            modal.show();
+        }
+
+        async function guardarEdicionTecnico() {
+            const id = document.getElementById('editIdTecnico').value;
+            const nombre = document.getElementById('editNombreTecnico').value;
+            const estado = document.getElementById('editEstadoTecnico').value;
+
+            try {
+                const respuesta = await fetch(`http://localhost:8000/api/tecnicos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        nombre: nombre,
+                        estado: estado 
+                    })
+                });
+
+                if (respuesta.ok) {
+                    const modalEl = document.getElementById('modalEditarTecnico');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    cargarTecnicos();
+                } else {
+                    alert("Error al actualizar el técnico.");
+                }
+            } catch (error) {
+                console.error("Error en PUT:", error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarTecnicos);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

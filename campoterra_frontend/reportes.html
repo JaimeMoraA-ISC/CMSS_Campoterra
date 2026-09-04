@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Reportes | Campoterra CMMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        .sidebar { height: 100vh; width: 260px; background-color: #0b1528; position: fixed; top: 0; left: 0; padding-top: 20px; color: white; z-index: 1000; }
+        .sidebar-brand { font-size: 1.2rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .sidebar-brand i { font-size: 1.8rem; margin-right: 10px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 15px; color: #a0aabf; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { color: white; background-color: #1a2639; border-left: 4px solid #3498db; }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+        .main-content { margin-left: 260px; padding-bottom: 40px; }
+        .topbar { background-color: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; align-items: center; margin-bottom: 30px; }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ LATERAL -->
+    <div class="sidebar">
+       <div class="sidebar-brand" style="line-height: 1.2;">
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+        <img src="logo.png" alt="Logo Campoterra" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 2px solid #3498db;">
+        <span>CAMPOTERRA</span>
+    </div>
+    <small style="font-size: 12px; font-weight: normal; color: #a0aabf; display: block;">CONGELADORA</small>
+</div>
+        <a href="dashboard.html"><i class="fas fa-home"></i> Panel de Inicio</a>
+        <a href="bitacoras.html"><i class="fas fa-clipboard-list"></i> Historial de Bitácoras</a>
+        <a href="maquinaria.html"><i class="fas fa-box"></i> Catálogo de Maquinaria</a>
+        <a href="personal.html"><i class="fas fa-users"></i> Control de Personal</a>
+        <a href="reportes.html" class="active"><i class="fas fa-file-alt"></i> Reportes y Descargas</a>
+        
+        <div style="position: absolute; bottom: 20px; width: 100%;">
+            <a href="login.html"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+        <div class="topbar">
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
+                <div style="line-height: 1.2;">
+                    <strong>Jorge Ríos</strong><br><small style="color: #888;">Jefe de Mantenimiento</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid px-4">
+            <h4 class="text-secondary mb-4"><strong>GENERADOR DE REPORTES</strong></h4>
+
+            <!-- PANEL DE FILTROS -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold">Fecha Inicio</label>
+                            <input type="date" id="filtroInicio" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold">Fecha Fin</label>
+                            <input type="date" id="filtroFin" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold">Tipo de Trabajo</label>
+                            <select id="filtroTipo" class="form-select">
+                                <option value="Todos">Todos</option>
+                                <option value="Preventivo">Preventivo</option>
+                                <option value="Correctivo">Correctivo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button class="btn btn-primary w-100" onclick="aplicarFiltros()"><i class="fas fa-filter me-2"></i> Filtrar</button>
+                            <button class="btn btn-success w-100" onclick="descargarExcel()"><i class="fas fa-file-excel me-2"></i> Excel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA PREVIA DE DATOS -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-secondary">Vista Previa de Datos</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0" id="tabla-reporte">
+                        <thead class="table-light">
+                            <tr>
+                                <th>FOLIO</th>
+                                <th>FECHA</th>
+                                <th>MÁQUINA</th>
+                                <th>TÉCNICO</th>
+                                <th>TIPO</th>
+                                <th>DESCRIPCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Llenado dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librerías -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        let bitacorasGlobal = []; // Guardamos los datos aquí para filtrarlos sin consultar la BD a cada rato
+
+        async function cargarDatos() {
+            try {
+                const respuesta = await fetch('http://localhost:8000/api/bitacoras/');
+                if (respuesta.ok) {
+                    bitacorasGlobal = await respuesta.json();
+                    renderizarTabla(bitacorasGlobal);
+                }
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+            }
+        }
+
+        function renderizarTabla(datos) {
+            const tbody = document.querySelector('#tabla-reporte tbody');
+            tbody.innerHTML = ''; 
+
+            if(datos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron registros para estos filtros.</td></tr>';
+                return;
+            }
+
+            datos.forEach(b => {
+                let badgeColor = b.tipo_mantenimiento === 'Preventivo' ? 'bg-success' : 'bg-danger';
+                let fechaCorta = new Date(b.fecha_registro).toLocaleDateString('es-MX');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="align-middle fw-bold">#${b.id_bitacora}</td>
+                        <td class="align-middle">${fechaCorta}</td>
+                        <td class="align-middle fw-bold text-primary">${b.nombre_equipo}</td>
+                        <td class="align-middle">${b.nombre_tecnico}</td>
+                        <td class="align-middle"><span class="badge ${badgeColor}">${b.tipo_mantenimiento}</span></td>
+                        <td class="align-middle text-truncate" style="max-width: 250px;">${b.descripcion}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function aplicarFiltros() {
+            const fInicio = document.getElementById('filtroInicio').value;
+            const fFin = document.getElementById('filtroFin').value;
+            const fTipo = document.getElementById('filtroTipo').value;
+
+            let filtrados = bitacorasGlobal;
+
+            // Filtrar por Tipo
+            if (fTipo !== 'Todos') {
+                filtrados = filtrados.filter(b => b.tipo_mantenimiento === fTipo);
+            }
+
+            // Filtrar por Fechas
+            if (fInicio) {
+                const fechaInicio = new Date(fInicio);
+                fechaInicio.setHours(0,0,0,0);
+                filtrados = filtrados.filter(b => new Date(b.fecha_registro) >= fechaInicio);
+            }
+            if (fFin) {
+                const fechaFin = new Date(fFin);
+                fechaFin.setHours(23,59,59,999);
+                filtrados = filtrados.filter(b => new Date(b.fecha_registro) <= fechaFin);
+            }
+
+            renderizarTabla(filtrados);
+        }
+
+        function descargarExcel() {
+            const tabla = document.getElementById('tabla-reporte');
+            const libroExcel = XLSX.utils.table_to_book(tabla, {sheet: "Reportes Filtrados"});
+            
+            // Genera el nombre del archivo con la fecha de hoy
+            const fechaHoy = new Date().toLocaleDateString('es-MX').replace(/\//g, '-');
+            XLSX.writeFile(libroExcel, `Reporte_Campoterra_${fechaHoy}.xlsx`);
+        }
+
+        // Cargar todo al inicio
+        document.addEventListener('DOMContentLoaded', cargarDatos);
+    </script>
+</body>
+</html>
