@@ -85,7 +85,10 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
 
           {/* Botón Iniciar Jornada */}
-          <TouchableOpacity style={[styles.primaryButton, { paddingVertical: isTablet ? 22 : 16 }]}>
+          <TouchableOpacity 
+            style={[styles.primaryButton, { paddingVertical: isTablet ? 22 : 16 }]}
+            onPress={() => navigation.replace('Home')}
+          >
             <View style={styles.buttonCenter}>
               <Ionicons name="play" size={isTablet ? 24 : 20} color="#fff" style={styles.playIcon} />
               <Text style={[styles.buttonText, { fontSize: isTablet ? 22 : 18 }]}>INICIAR JORNADA</Text>
