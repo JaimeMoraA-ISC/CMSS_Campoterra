@@ -30,8 +30,6 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerSubtitle}>MANTENIMIENTO</Text>
               <Text style={[styles.headerTitle, { fontSize: isTablet ? 32 : 28 }]}>Panel Principal</Text>
-              <Text style={styles.cursiveText}>Equipos en movimiento,</Text>
-              <Text style={styles.cursiveText}>producción sin límites</Text>
             </View>
             <TouchableOpacity style={styles.logoutBtn} onPress={() => navigation.replace('Login')}>
               <Ionicons name="log-out-outline" size={24} color="#0b1528" />
@@ -82,7 +80,11 @@ export default function HomeScreen({ navigation }) {
 
           {/* Cuadrícula de Acciones */}
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={[styles.actionCard, { marginRight: 15 }]}>
+            {/* Tarjeta Nuevo Reporte */}
+            <TouchableOpacity 
+              style={[styles.actionCard, { marginRight: 15 }]}
+              onPress={() => navigation.navigate('NewReport')}
+            >
               <View style={styles.actionCardHeader}>
                 <View style={[styles.iconBox, { backgroundColor: '#eaf4eb' }]}>
                   <MaterialCommunityIcons name="clipboard-plus-outline" size={28} color="#27ae60" />
