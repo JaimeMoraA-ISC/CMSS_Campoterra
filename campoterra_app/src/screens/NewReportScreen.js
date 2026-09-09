@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, TextInput, useWindowDimensions, Image, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { submitNewReport } from '../services/api';
+import { getEquipos, submitNewReport } from '../services/api';
+
 
 const equipmentList = [
   { id: 1, name: 'Bandas\nTransportadoras', icon: 'minus-box-multiple-outline', area: 'Área de Producción' },
@@ -75,10 +78,25 @@ export default function NewReportScreen({ navigation }) {
   const deletePart = (partId) => setCart(cart.filter(c => c.partId !== partId));
   const clearCart = () => setCart([]);
 
-  const handleSaveReport = () => {
-    Alert.alert("Éxito", "El reporte de mantenimiento se ha guardado correctamente.", [
-      { text: "OK", onPress: () => navigation.replace('Home') }
-    ]);
+ const handleSaveReport = async () => {
+    // Empaquetamos toda la información de los 4 pasos
+    const reportData = {
+      equipo_id: selectedId,
+      tipo_trabajo: workType,
+      descripcion: description,
+      piezas: cart // El carrito de piezas que armamos en el paso 4
+    };
+
+    try {
+      const response = await submitNewReport(reportData);
+      
+      // Si todo sale bien, mostramos alerta y regresamos al Home
+      Alert.alert("Éxito", response.message, [
+        { text: "OK", onPress: () => navigation.replace('Home') }
+      ]);
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar el reporte. Verifica tu conexión.");
+    }
   };
 
   const renderStep1 = () => (

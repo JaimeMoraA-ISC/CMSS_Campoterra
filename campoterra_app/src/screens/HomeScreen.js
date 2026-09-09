@@ -97,7 +97,10 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.actionDesc}>Registrar mantenimiento preventivo o correctivo en la planta.</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.actionCard, { backgroundColor: '#fffbf9', borderColor: '#fce3b3' }]}>
+           <TouchableOpacity 
+              style={[styles.actionCard, { backgroundColor: '#fffbf9', borderColor: '#fce3b3' }]}
+              onPress={() => navigation.navigate('UrgentReport')}
+            >
               <View style={styles.actionCardHeader}>
                 <View style={[styles.iconBox, { backgroundColor: '#fce3b3' }]}>
                   <MaterialCommunityIcons name="alert-decagram-outline" size={28} color="#e55039" />

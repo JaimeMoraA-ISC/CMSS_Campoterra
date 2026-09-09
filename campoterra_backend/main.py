@@ -4,7 +4,7 @@ import models
 import schemas
 from database import engine, get_db
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -29,6 +29,35 @@ def obtener_equipos(db: Session = Depends(get_db)):
     equipos = db.query(models.Equipo).all()
     return equipos
 
+class ShiftStartRequest(BaseModel):
+    tecnico: str
+    turno: str
+
+@app.post("/api/shift/start")
+async def start_shift(data: ShiftStartRequest):
+    # Aquí es donde en el futuro guardarás esto en tu base de datos (MySQL/MongoDB)
+    print(f"✅ RECIBIDO: Iniciando jornada para {data.tecnico} en el {data.turno}")
+    
+    # Le respondemos a la app móvil que todo salió bien
+    return {
+        "status": "success",
+        "message": "Jornada registrada correctamente",
+        "tecnico_activo": data.tecnico
+    }
+
+# 3. Ruta GET para enviar las opciones de técnicos y turnos disponibles
+@app.get("/api/shift/options", tags=["App Móvil Técnicos"])
+def get_shift_options(db: Session = Depends(get_db)):
+    """
+    Obtiene los técnicos activos y los turnos directamente desde MySQL.
+    """
+    tecnicos_db = db.query(models.Tecnico).filter(models.Tecnico.estado == "Activo").all()
+    turnos_db = db.query(models.Turno).all()
+    
+    return {
+        "tecnicos": [t.nombre for t in tecnicos_db],
+        "turnos": [t.descripcion for t in turnos_db]
+    }
 
 class BitacoraCreate(BaseModel):
     id_equipo: int
@@ -297,3 +326,67 @@ def obtener_bitacoras(db: Session = Depends(get_db)):
         })
         
     return bitacoras_formateadas
+
+# Modelo para las piezas que vienen en el carrito
+class PiezaReporte(BaseModel):
+    partId: int
+    qty: int
+
+# Modelo para el reporte completo
+class NuevoReporteRequest(BaseModel):
+    equipo_id: int
+    tipo_trabajo: str
+    descripcion: str
+    piezas: List[PiezaReporte]
+
+# Ruta para recibir y guardar el reporte
+@app.post("/api/reports/new", tags=["App Móvil Técnicos"])
+def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)):
+    """
+    Recibe el reporte del asistente móvil de 4 pasos y lo guarda en la base de datos.
+    """
+    # Convertimos la lista de piezas del carrito a un texto plano para la columna 'detalles_repuestos'
+    detalles_texto = ", ".join([f"ID P: {p.partId} (Cant: {p.qty})" for p in report.piezas]) if report.piezas else None
+    
+    nueva_bitacora = models.Bitacora(
+        id_equipo=report.equipo_id,
+        id_tecnico=1,  # Puedes ajustar esto según el técnico autenticado en sesión
+        id_turno=1,    # Puedes ajustar esto según el turno seleccionado
+        tipo_mantenimiento=report.tipo_trabajo,
+        descripcion=report.descripcion,
+        detalles_repuestos=detalles_texto
+    )
+    
+    db.add(nueva_bitacora)
+    db.commit()
+    db.refresh(nueva_bitacora)
+    
+    return {
+        "status": "success", 
+        "message": "¡Reporte guardado con éxito en la base de datos!",
+        "folio_bitacora": nueva_bitacora.id_bitacora
+    }
+
+# Modelo para la falla urgente
+class AlertaUrgenteRequest(BaseModel):
+    linea_detenida: bool
+    prioridad: str
+    equipo: str
+    descripcion: str
+
+# Ruta para recibir la alerta
+@app.post("/api/reports/urgent")
+async def create_urgent_alert(alerta: AlertaUrgenteRequest):
+    print("\n" + "🚨"*20)
+    print("🚨 ALERTA DE FALLA URGENTE 🚨")
+    print("🚨"*20)
+    print(f"🛑 Línea Detenida: {'SÍ' if alerta.linea_detenida else 'NO'}")
+    print(f"⚠️  Prioridad: {alerta.prioridad.upper()}")
+    print(f"⚙️  Equipo: {alerta.equipo}")
+    print(f"📝 Descripción: {alerta.descripcion}")
+    print("🚨"*20 + "\n")
+    
+    return {
+        "status": "success",
+        "message": f"Alerta enviada a mantenimiento con prioridad {alerta.prioridad}"
+    }
