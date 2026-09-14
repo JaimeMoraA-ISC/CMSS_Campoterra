@@ -6,7 +6,7 @@ from database import engine, get_db
 from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = FastAPI(title="API Campoterra CMMS")
 
@@ -407,14 +407,23 @@ async def create_urgent_alert(alerta: AlertaUrgenteRequest):
 
 @app.get("/api/dashboard/stats", tags=["App Móvil Técnicos"])
 def get_dashboard_stats(db: Session = Depends(get_db)):
-    # Contamos el total de bitácoras registradas
-    total_bitacoras = db.query(models.Bitacora).count()
+    # Contamos únicamente las bitácoras registradas durante el día actual.
+    inicio_hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    inicio_manana = inicio_hoy + timedelta(days=1)
+    completados_hoy = (
+        db.query(models.Bitacora)
+        .filter(
+            models.Bitacora.fecha_registro >= inicio_hoy,
+            models.Bitacora.fecha_registro < inicio_manana,
+        )
+        .count()
+    )
     
     # Contamos los equipos que están en mantenimiento
     fallas = db.query(models.Equipo).filter(models.Equipo.estado == "En Mantenimiento").count()
     
     return {
-        "completados_hoy": total_bitacoras,
+        "completados_hoy": completados_hoy,
         "pendientes": 0, # Marcador fijo por ahora
         "fallas_abiertas": fallas
     }
