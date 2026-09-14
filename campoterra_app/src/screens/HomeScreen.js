@@ -9,7 +9,12 @@ export default function HomeScreen({ navigation, route }) {
   const isTablet = width >= 600;
 
   // 1. Extraemos los datos del técnico que vienen desde la pantalla de Login
-  const { nombreTecnico = 'Técnico Invitado', turnoActivo = 'Sin turno asignado' } = route?.params || {};
+  const {
+    nombreTecnico = 'Técnico Invitado',
+    tecnicoId,
+    turnoActivo = 'Sin turno asignado',
+    turnoId,
+  } = route?.params || {};
 
   // 2. Estado para guardar los contadores de la base de datos
   const [stats, setStats] = useState({
@@ -108,7 +113,7 @@ export default function HomeScreen({ navigation, route }) {
           <View style={styles.actionsGrid}>
             <TouchableOpacity 
               style={[styles.actionCard, { marginRight: 15 }]}
-              onPress={() => navigation.navigate('NewReport')}
+              onPress={() => navigation.navigate('NewReport', { tecnicoId, turnoId })}
             >
               <View style={styles.actionCardHeader}>
                 <View style={[styles.iconBox, { backgroundColor: '#eaf4eb' }]}>

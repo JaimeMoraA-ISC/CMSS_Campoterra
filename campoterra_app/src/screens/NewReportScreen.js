@@ -38,10 +38,11 @@ const partCategories = [
 ];
 
 
-export default function NewReportScreen({ navigation }) {
+export default function NewReportScreen({ navigation, route }) {
 
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
+  const { tecnicoId, turnoId } = route?.params || {};
 
 
   // ==========================================
@@ -290,11 +291,21 @@ useEffect(() => {
     // Empaquetamos toda la información de los 4 pasos
     const reportData = {
       equipo_id: selectedId,
+      tecnico_id: tecnicoId,
+      turno_id: turnoId,
       tipo_trabajo: workType,
       descripcion: description,
       piezas: cart
     };
 
+
+    if (!tecnicoId || !turnoId) {
+      Alert.alert(
+        'Sesión incompleta',
+        'No se pudo identificar el técnico o turno activo. Regresa al inicio e inicia la jornada nuevamente.'
+      );
+      return;
+    }
 
     try {
 

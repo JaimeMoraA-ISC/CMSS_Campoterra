@@ -61,10 +61,17 @@ def get_shift_options(db: Session = Depends(get_db)):
         fin = str(t.hora_fin)[:5]
         
         # Formato final que verá el usuario en el Login y en su panel Home
-        turnos_formateados.append(f"{t.descripcion} ({inicio} a {fin})")
+        turnos_formateados.append({
+            "id_turno": t.id_turno,
+            "descripcion": t.descripcion,
+            "etiqueta": f"{t.descripcion} ({inicio} a {fin})",
+        })
     
     return {
-        "tecnicos": [t.nombre for t in tecnicos_db],
+        "tecnicos": [
+            {"id_tecnico": t.id_tecnico, "nombre": t.nombre}
+            for t in tecnicos_db
+        ],
         "turnos": turnos_formateados
     }
 
@@ -344,6 +351,8 @@ class PiezaReporte(BaseModel):
 # Modelo para el reporte completo
 class NuevoReporteRequest(BaseModel):
     equipo_id: int
+    tecnico_id: int
+    turno_id: int
     tipo_trabajo: str
     descripcion: str
     piezas: List[PiezaReporte]
@@ -365,8 +374,8 @@ def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)
     
     nueva_bitacora = models.Bitacora(
         id_equipo=report.equipo_id,
-        id_tecnico=1, 
-        id_turno=1,   
+        id_tecnico=report.tecnico_id,
+        id_turno=report.turno_id,
         tipo_mantenimiento=report.tipo_trabajo,
         descripcion=report.descripcion,
         detalles_repuestos=detalles_texto

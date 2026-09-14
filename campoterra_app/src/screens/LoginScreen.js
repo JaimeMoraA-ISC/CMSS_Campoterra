@@ -7,8 +7,8 @@ export default function LoginScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 600; 
 
-  const [tecnico, setTecnico] = useState('Seleccionar...');
-  const [turno, setTurno] = useState('Seleccionar...');
+  const [tecnico, setTecnico] = useState(null);
+  const [turno, setTurno] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Estados para cargar las opciones del backend
@@ -49,19 +49,21 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
-    if (tecnico === 'Seleccionar...' || turno === 'Seleccionar...') {
+    if (!tecnico || !turno) {
       Alert.alert('Datos incompletos', 'Por favor selecciona tu nombre y tu turno.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await startShift(tecnico, turno);
+      const response = await startShift(tecnico.nombre, turno.etiqueta);
       console.log('Jornada iniciada:', response);
       navigation.replace('Home', { 
-  nombreTecnico: tecnico, 
-  turnoActivo: turno 
-});
+        nombreTecnico: tecnico.nombre,
+        tecnicoId: tecnico.id_tecnico,
+        turnoActivo: turno.etiqueta,
+        turnoId: turno.id_turno,
+      });
     } catch (error) {
       Alert.alert('Error de Conexión', error.message);
     } finally {
@@ -109,7 +111,7 @@ export default function LoginScreen({ navigation }) {
             </View>
             <View style={styles.selectorInfo}>
               <Text style={styles.labelText}>EMPLEADO</Text>
-              <Text style={[styles.valueText, { fontSize: isTablet ? 22 : 18 }]}>{tecnico}</Text>
+              <Text style={[styles.valueText, { fontSize: isTablet ? 22 : 18 }]}>{tecnico?.nombre || 'Seleccionar...'}</Text>
               <Text style={styles.subValueText}>Toca para seleccionar</Text>
             </View>
             <Ionicons name="chevron-down" size={24} color="#7f8fa6" />
@@ -121,7 +123,7 @@ export default function LoginScreen({ navigation }) {
             </View>
             <View style={styles.selectorInfo}>
               <Text style={styles.labelText}>TURNO</Text>
-              <Text style={[styles.valueText, { fontSize: isTablet ? 22 : 18 }]}>{turno}</Text>
+              <Text style={[styles.valueText, { fontSize: isTablet ? 22 : 18 }]}>{turno?.etiqueta || 'Seleccionar...'}</Text>
               <Text style={styles.subValueText}>Toca para seleccionar</Text>
             </View>
             <Ionicons name="chevron-down" size={24} color="#7f8fa6" />
@@ -177,7 +179,9 @@ export default function LoginScreen({ navigation }) {
               keyExtractor={(item, index) => index.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.optionItem} onPress={() => handleSelectOption(item)}>
-                  <Text style={styles.optionText}>{item}</Text>
+                  <Text style={styles.optionText}>
+                    {modalType === 'tecnico' ? item.nombre : item.etiqueta}
+                  </Text>
                   <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
                 </TouchableOpacity>
               )}
