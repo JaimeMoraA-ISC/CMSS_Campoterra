@@ -242,6 +242,38 @@
             </div>
         </div>
 
+        <!-- INVENTARIO Y MOVIMIENTOS -->
+        <div class="container-fluid px-4 mb-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h5 class="mb-1 text-secondary"><strong>INVENTARIO DE REFACCIONES</strong></h5>
+                        <small class="text-muted">Existencias actuales y movimientos recientes</small>
+                    </div>
+                    <form id="formEntradaPieza" class="d-flex flex-wrap gap-2">
+                        <select id="entradaPieza" class="form-select" required style="min-width: 190px;"></select>
+                        <input id="entradaCantidad" type="number" min="1" class="form-control" placeholder="Cantidad" required style="width: 110px;">
+                        <input id="entradaMotivo" type="text" class="form-control" placeholder="Motivo" style="min-width: 180px;">
+                        <button class="btn btn-success" type="submit"><i class="fas fa-plus me-1"></i> Reabastecer</button>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light"><tr><th>Pieza</th><th>Código</th><th>Categoría</th><th>Existencia</th></tr></thead>
+                        <tbody id="tabla-inventario"><tr><td colspan="4" class="text-muted">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+                <hr>
+                <h6 class="text-secondary">MOVIMIENTOS RECIENTES</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light"><tr><th>Fecha</th><th>Pieza</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+                        <tbody id="tabla-movimientos"><tr><td colspan="5" class="text-muted">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- SECCIÓN DE GRÁFICAS -->
         <div class="container-fluid px-4 mb-4">
             <div class="row g-3">
@@ -448,6 +480,56 @@
         }
 
         document.addEventListener('DOMContentLoaded', cargarBitacoras);
+
+        async function cargarInventario() {
+            const respuesta = await fetch('http://localhost:8000/api/piezas/');
+            if (!respuesta.ok) throw new Error('No se pudo cargar el inventario');
+            const piezas = await respuesta.json();
+            const tabla = document.getElementById('tabla-inventario');
+            const selector = document.getElementById('entradaPieza');
+            tabla.innerHTML = '';
+            selector.innerHTML = '<option value="">Seleccionar pieza...</option>';
+            piezas.forEach(pieza => {
+                tabla.innerHTML += `<tr><td>${pieza.nombre}</td><td>${pieza.codigo}</td><td>${pieza.categoria}</td><td><span class="badge ${pieza.stock <= 5 ? 'bg-danger' : 'bg-success'}">${pieza.stock}</span></td></tr>`;
+                selector.innerHTML += `<option value="${pieza.id_pieza}">${pieza.nombre} (${pieza.stock})</option>`;
+            });
+        }
+
+        async function cargarMovimientos() {
+            const respuesta = await fetch('http://localhost:8000/api/inventario/movimientos');
+            if (!respuesta.ok) throw new Error('No se pudo cargar el historial de inventario');
+            const movimientos = await respuesta.json();
+            const tabla = document.getElementById('tabla-movimientos');
+            tabla.innerHTML = '';
+            movimientos.forEach(movimiento => {
+                tabla.innerHTML += `<tr><td>${new Date(movimiento.fecha_movimiento).toLocaleString('es-MX')}</td><td>${movimiento.nombre_pieza}</td><td><span class="badge ${movimiento.tipo === 'Entrada' ? 'bg-success' : 'bg-danger'}">${movimiento.tipo}</span></td><td>${movimiento.cantidad}</td><td>${movimiento.motivo}</td></tr>`;
+            });
+        }
+
+        document.getElementById('formEntradaPieza').addEventListener('submit', async event => {
+            event.preventDefault();
+            const piezaId = document.getElementById('entradaPieza').value;
+            const cantidad = Number(document.getElementById('entradaCantidad').value);
+            const motivo = document.getElementById('entradaMotivo').value || 'Reabastecimiento';
+            try {
+                const respuesta = await fetch(`http://localhost:8000/api/piezas/${piezaId}/entradas`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cantidad, motivo})
+                });
+                const datos = await respuesta.json();
+                if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo registrar la entrada');
+                event.target.reset();
+                await Promise.all([cargarInventario(), cargarMovimientos()]);
+                alert('Entrada registrada correctamente.');
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Promise.all([cargarInventario(), cargarMovimientos()]).catch(error => console.error(error));
+        });
 
         function obtenerSemanaActual() {
             const ahora = new Date();

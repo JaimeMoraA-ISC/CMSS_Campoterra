@@ -71,3 +71,12 @@ class PiezaResponse(PiezaBase):
     
     class Config:
         from_attributes = True
+
+class MovimientoPiezaResponse(BaseModel):
+    id_movimiento: int
+    id_pieza: int
+    nombre_pieza: str
+    tipo: str
+    cantidad: int
+    motivo: str
+    fecha_movimiento: datetime

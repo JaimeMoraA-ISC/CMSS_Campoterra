@@ -75,3 +75,15 @@ class Pieza(Base):
     stock = Column(Integer, default=0)
     categoria = Column(String(50), default="General")
     icon = Column(String(50), default="cog-outline") # Para el ícono en la app
+
+class MovimientoPieza(Base):
+    __tablename__ = "movimientos_piezas"
+
+    id_movimiento = Column(Integer, primary_key=True, index=True)
+    id_pieza = Column(Integer, ForeignKey("piezas.id_pieza"), nullable=False)
+    tipo = Column(String(20), nullable=False)  # Entrada o Salida
+    cantidad = Column(Integer, nullable=False)
+    motivo = Column(String(255), nullable=False)
+    fecha_movimiento = Column(TIMESTAMP, nullable=False)
+
+    pieza = relationship("Pieza")

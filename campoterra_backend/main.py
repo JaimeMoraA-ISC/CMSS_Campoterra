@@ -17,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, y OPTIONS
     allow_headers=["*"],  # Permite el envío de cualquier dato
 )
+
+# Crea las tablas nuevas cuando el backend se inicia, sin modificar las existentes.
+models.Base.metadata.create_all(bind=engine)
 # Ruta de prueba básica
 @app.get("/")
 def ruta_raiz():
@@ -414,6 +417,15 @@ def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)
     )
     
     db.add(nueva_bitacora)
+    db.flush()
+    for part_id in piezas_db:
+        db.add(models.MovimientoPieza(
+            id_pieza=part_id,
+            tipo="Salida",
+            cantidad=cantidades_por_pieza[part_id],
+            motivo=f"Reporte de mantenimiento #{nueva_bitacora.id_bitacora}",
+            fecha_movimiento=datetime.now(),
+        ))
     db.commit()
     db.refresh(nueva_bitacora)
     
@@ -557,3 +569,56 @@ def registrar_pieza(pieza: schemas.PiezaCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(nueva_pieza)
     return nueva_pieza
+
+class EntradaPiezaRequest(BaseModel):
+    cantidad: int
+    motivo: str = "Reabastecimiento"
+
+@app.post("/api/piezas/{pieza_id}/entradas", response_model=schemas.PiezaResponse, tags=["Inventario"])
+def registrar_entrada_pieza(
+    pieza_id: int,
+    entrada: EntradaPiezaRequest,
+    db: Session = Depends(get_db),
+):
+    if entrada.cantidad <= 0:
+        raise HTTPException(status_code=422, detail="La cantidad debe ser mayor que cero.")
+
+    pieza = (
+        db.query(models.Pieza)
+        .filter(models.Pieza.id_pieza == pieza_id)
+        .with_for_update()
+        .first()
+    )
+    if not pieza:
+        raise HTTPException(status_code=404, detail="La pieza no existe en el inventario.")
+
+    pieza.stock += entrada.cantidad
+    db.add(models.MovimientoPieza(
+        id_pieza=pieza_id,
+        tipo="Entrada",
+        cantidad=entrada.cantidad,
+        motivo=entrada.motivo,
+        fecha_movimiento=datetime.now(),
+    ))
+    db.commit()
+    db.refresh(pieza)
+    return pieza
+
+@app.get("/api/inventario/movimientos", response_model=list[schemas.MovimientoPiezaResponse], tags=["Inventario"])
+def obtener_movimientos_inventario(db: Session = Depends(get_db)):
+    movimientos = (
+        db.query(
+            models.MovimientoPieza.id_movimiento,
+            models.MovimientoPieza.id_pieza,
+            models.Pieza.nombre.label("nombre_pieza"),
+            models.MovimientoPieza.tipo,
+            models.MovimientoPieza.cantidad,
+            models.MovimientoPieza.motivo,
+            models.MovimientoPieza.fecha_movimiento,
+        )
+        .join(models.Pieza, models.MovimientoPieza.id_pieza == models.Pieza.id_pieza)
+        .order_by(models.MovimientoPieza.fecha_movimiento.desc())
+        .limit(200)
+        .all()
+    )
+    return movimientos
