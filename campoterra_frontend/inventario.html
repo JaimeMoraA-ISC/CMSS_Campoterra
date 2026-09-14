@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campoterra CMMS | Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { height: 100vh; width: 260px; background: #0b1528; position: fixed; inset: 0 auto 0 0; padding-top: 20px; color: white; }
+        .sidebar-brand { font-size: 1.2rem; font-weight: bold; text-align: center; margin-bottom: 40px; letter-spacing: 1px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 15px; color: #a0aabf; display: block; }
+        .sidebar a:hover, .sidebar a.active { color: white; background: #1a2639; border-left: 4px solid #3498db; }
+        .sidebar a i { margin-right: 15px; width: 20px; text-align: center; }
+        .main-content { margin-left: 260px; padding-bottom: 40px; }
+        .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        @media (max-width: 800px) { .sidebar { width: 210px; } .main-content { margin-left: 210px; } .topbar { padding: 15px; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-brand" style="line-height: 1.2;">
+            <div style="display:flex;align-items:center;justify-content:center;margin-bottom:5px;">
+                <img src="logo.png" alt="Logo Campoterra" style="width:38px;height:38px;border-radius:50%;object-fit:cover;margin-right:12px;border:2px solid #3498db;">
+                <span>CAMPOTERRA</span>
+            </div>
+            <small style="font-size:12px;font-weight:normal;color:#a0aabf;display:block;">CONGELADORA</small>
+        </div>
+        <a href="dashboard.html"><i class="fas fa-home"></i> Panel de Inicio</a>
+        <a href="bitacoras.html"><i class="fas fa-clipboard-list"></i> Historial de Bitácoras</a>
+        <a href="maquinaria.html"><i class="fas fa-box"></i> Catálogo de Maquinaria</a>
+        <a href="personal.html"><i class="fas fa-users"></i> Control de Personal</a>
+        <a href="inventario.html" class="active"><i class="fas fa-boxes-stacked"></i> Inventario</a>
+        <a href="reportes.html"><i class="fas fa-file-alt"></i> Reportes y Descargas</a>
+        <div style="position:absolute;bottom:20px;width:100%;"><a href="login.html"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a></div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <div>
+                <h4 class="mb-1 text-secondary">Inventario de refacciones</h4>
+                <small class="text-muted">Existencias actuales y movimientos de almacén</small>
+            </div>
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
+                <div><strong>Jorge Ríos</strong><br><small class="text-muted">Jefe de Mantenimiento</small></div>
+            </div>
+        </div>
+
+        <div class="container-fluid px-4">
+            <div id="mensaje" class="alert d-none"></div>
+            <div class="card border-0 shadow-sm p-4 mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div><h5 class="mb-1 text-secondary">Existencias</h5><small class="text-muted">Consulta las piezas disponibles antes de asignarlas.</small></div>
+                    <form id="formEntradaPieza" class="d-flex flex-wrap gap-2">
+                        <select id="entradaPieza" class="form-select" required style="min-width:220px;"></select>
+                        <input id="entradaCantidad" type="number" min="1" class="form-control" placeholder="Cantidad" required style="width:110px;">
+                        <input id="entradaMotivo" type="text" class="form-control" placeholder="Motivo" style="min-width:190px;">
+                        <button class="btn btn-success" type="submit"><i class="fas fa-plus me-1"></i> Reabastecer</button>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th>Pieza</th><th>Código</th><th>Categoría</th><th>Existencia</th></tr></thead>
+                        <tbody id="tabla-inventario"><tr><td colspan="4" class="text-muted">Cargando inventario...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="mb-3 text-secondary">Movimientos recientes</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th>Fecha</th><th>Pieza</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+                        <tbody id="tabla-movimientos"><tr><td colspan="5" class="text-muted">Cargando movimientos...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:8000';
+        const mensaje = document.getElementById('mensaje');
+        function mostrarMensaje(texto, tipo) {
+            mensaje.textContent = texto;
+            mensaje.className = `alert alert-${tipo}`;
+        }
+        async function cargarInventario() {
+            const respuesta = await fetch(`${API}/api/piezas/`);
+            if (!respuesta.ok) throw new Error('No se pudo cargar el inventario.');
+            const piezas = await respuesta.json();
+            const tabla = document.getElementById('tabla-inventario');
+            const selector = document.getElementById('entradaPieza');
+            tabla.innerHTML = '';
+            selector.innerHTML = '<option value="">Seleccionar pieza...</option>';
+            piezas.forEach(pieza => {
+                const color = pieza.stock <= 5 ? 'bg-danger' : 'bg-success';
+                tabla.innerHTML += `<tr><td>${pieza.nombre}</td><td>${pieza.codigo}</td><td>${pieza.categoria}</td><td><span class="badge ${color}">${pieza.stock}</span></td></tr>`;
+                selector.innerHTML += `<option value="${pieza.id_pieza}">${pieza.nombre} (${pieza.stock})</option>`;
+            });
+        }
+        async function cargarMovimientos() {
+            const respuesta = await fetch(`${API}/api/inventario/movimientos`);
+            if (!respuesta.ok) throw new Error('No se pudo cargar el historial.');
+            const movimientos = await respuesta.json();
+            const tabla = document.getElementById('tabla-movimientos');
+            tabla.innerHTML = '';
+            movimientos.forEach(movimiento => {
+                const color = movimiento.tipo === 'Entrada' ? 'bg-success' : 'bg-danger';
+                tabla.innerHTML += `<tr><td>${new Date(movimiento.fecha_movimiento).toLocaleString('es-MX')}</td><td>${movimiento.nombre_pieza}</td><td><span class="badge ${color}">${movimiento.tipo}</span></td><td>${movimiento.cantidad}</td><td>${movimiento.motivo}</td></tr>`;
+            });
+        }
+        document.getElementById('formEntradaPieza').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                const respuesta = await fetch(`${API}/api/piezas/${document.getElementById('entradaPieza').value}/entradas`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        cantidad: Number(document.getElementById('entradaCantidad').value),
+                        motivo: document.getElementById('entradaMotivo').value || 'Reabastecimiento'
+                    })
+                });
+                const datos = await respuesta.json();
+                if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo registrar la entrada.');
+                event.target.reset();
+                await Promise.all([cargarInventario(), cargarMovimientos()]);
+                mostrarMensaje('Entrada registrada correctamente.', 'success');
+            } catch (error) { mostrarMensaje(error.message, 'danger'); }
+        });
+        Promise.all([cargarInventario(), cargarMovimientos()]).catch(error => mostrarMensaje(error.message, 'danger'));
+    </script>
+</body>
+</html>
