@@ -2,7 +2,7 @@
 
 // IMPORTANTE: En Expo/React Native, 'localhost' o '127.0.0.1' no siempre funciona 
 // src/services/api.js
-const BASE_URL = 'http://192.168.1.124:8000'; // Usa tu IP local
+const BASE_URL = 'http://192.168.1.125:8000'; // Usa tu IP local
 
 export const startShift = async (tecnico, turno) => {
   try {
@@ -105,5 +105,27 @@ export const getEquipos = async () => {
   } catch (error) {
     console.error('Error en getEquipos:', error);
     throw error;
+  }
+};
+
+export const getDashboardStats = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/dashboard/stats`);
+    const data = await response.json();
+    if (!response.ok) throw new Error('Error al cargar estadísticas');
+    return data;
+  } catch (error) {
+    console.error('Error en getDashboardStats:', error);
+    throw error;
+  }
+};
+
+export const getPiezas = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/piezas/`);
+    return await response.json();
+  } catch (error) {
+    console.error("Error obteniendo piezas:", error);
+    return [];
   }
 };

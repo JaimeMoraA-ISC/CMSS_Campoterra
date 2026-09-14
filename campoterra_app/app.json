@@ -17,14 +17,17 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.jaimea2552.campoterra_app"
     },
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      
       [
         "expo-splash-screen",
         {

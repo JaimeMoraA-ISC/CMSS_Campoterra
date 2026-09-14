@@ -6,7 +6,7 @@ from database import engine, get_db
 from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-
+from datetime import datetime
 
 app = FastAPI(title="API Campoterra CMMS")
 
@@ -49,14 +49,23 @@ async def start_shift(data: ShiftStartRequest):
 @app.get("/api/shift/options", tags=["App Móvil Técnicos"])
 def get_shift_options(db: Session = Depends(get_db)):
     """
-    Obtiene los técnicos activos y los turnos directamente desde MySQL.
+    Obtiene los técnicos activos y los turnos (incluyendo sus horarios) desde MySQL.
     """
     tecnicos_db = db.query(models.Tecnico).filter(models.Tecnico.estado == "Activo").all()
     turnos_db = db.query(models.Turno).all()
     
+    turnos_formateados = []
+    for t in turnos_db:
+        # Convertimos la hora a texto y tomamos solo los primeros 5 caracteres (HH:MM) para quitar los segundos
+        inicio = str(t.hora_inicio)[:5] 
+        fin = str(t.hora_fin)[:5]
+        
+        # Formato final que verá el usuario en el Login y en su panel Home
+        turnos_formateados.append(f"{t.descripcion} ({inicio} a {fin})")
+    
     return {
         "tecnicos": [t.nombre for t in tecnicos_db],
-        "turnos": [t.descripcion for t in turnos_db]
+        "turnos": turnos_formateados
     }
 
 class BitacoraCreate(BaseModel):
@@ -317,7 +326,7 @@ def obtener_bitacoras(db: Session = Depends(get_db)):
     for r in resultados:
         bitacoras_formateadas.append({
             "id_bitacora": r.id_bitacora,
-            "fecha_registro": r.fecha_registro,
+            "fecha_registro": r.fecha_registro or datetime.now(), # <--- Aquí está el salvavidas aplicado
             "nombre_equipo": r.nombre_equipo,
             "nombre_tecnico": r.nombre_tecnico,
             "tipo_mantenimiento": r.tipo_mantenimiento,
@@ -342,16 +351,22 @@ class NuevoReporteRequest(BaseModel):
 # Ruta para recibir y guardar el reporte
 @app.post("/api/reports/new", tags=["App Móvil Técnicos"])
 def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)):
-    """
-    Recibe el reporte del asistente móvil de 4 pasos y lo guarda en la base de datos.
-    """
-    # Convertimos la lista de piezas del carrito a un texto plano para la columna 'detalles_repuestos'
-    detalles_texto = ", ".join([f"ID P: {p.partId} (Cant: {p.qty})" for p in report.piezas]) if report.piezas else None
+    # Buscamos los nombres reales de las piezas en la Base de Datos
+    if report.piezas:
+        lista_detalles = []
+        for p in report.piezas:
+            pieza_db = db.query(models.Pieza).filter(models.Pieza.id_pieza == p.partId).first()
+            nombre_pieza = pieza_db.nombre if pieza_db else f"Pieza ID {p.partId}"
+            lista_detalles.append(f"{nombre_pieza} (Cant: {p.qty})")
+        
+        detalles_texto = ", ".join(lista_detalles)
+    else:
+        detalles_texto = None
     
     nueva_bitacora = models.Bitacora(
         id_equipo=report.equipo_id,
-        id_tecnico=1,  # Puedes ajustar esto según el técnico autenticado en sesión
-        id_turno=1,    # Puedes ajustar esto según el turno seleccionado
+        id_tecnico=1, 
+        id_turno=1,   
         tipo_mantenimiento=report.tipo_trabajo,
         descripcion=report.descripcion,
         detalles_repuestos=detalles_texto
@@ -363,10 +378,9 @@ def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)
     
     return {
         "status": "success", 
-        "message": "¡Reporte guardado con éxito en la base de datos!",
+        "message": "¡Reporte guardado con éxito!",
         "folio_bitacora": nueva_bitacora.id_bitacora
     }
-
 # Modelo para la falla urgente
 class AlertaUrgenteRequest(BaseModel):
     linea_detenida: bool
@@ -390,3 +404,31 @@ async def create_urgent_alert(alerta: AlertaUrgenteRequest):
         "status": "success",
         "message": f"Alerta enviada a mantenimiento con prioridad {alerta.prioridad}"
     }
+
+@app.get("/api/dashboard/stats", tags=["App Móvil Técnicos"])
+def get_dashboard_stats(db: Session = Depends(get_db)):
+    # Contamos el total de bitácoras registradas
+    total_bitacoras = db.query(models.Bitacora).count()
+    
+    # Contamos los equipos que están en mantenimiento
+    fallas = db.query(models.Equipo).filter(models.Equipo.estado == "En Mantenimiento").count()
+    
+    return {
+        "completados_hoy": total_bitacoras,
+        "pendientes": 0, # Marcador fijo por ahora
+        "fallas_abiertas": fallas
+    }
+
+@app.get("/api/piezas/", response_model=list[schemas.PiezaResponse], tags=["Catálogos del Sistema"])
+def obtener_piezas(db: Session = Depends(get_db)):
+    """Devuelve el inventario completo para la App y el Dashboard"""
+    return db.query(models.Pieza).all()
+
+@app.post("/api/piezas/", response_model=schemas.PiezaResponse, tags=["Catálogos del Sistema"])
+def registrar_pieza(pieza: schemas.PiezaCreate, db: Session = Depends(get_db)):
+    """Permite al Dashboard Web agregar nuevas piezas"""
+    nueva_pieza = models.Pieza(**pieza.dict())
+    db.add(nueva_pieza)
+    db.commit()
+    db.refresh(nueva_pieza)
+    return nueva_pieza

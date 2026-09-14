@@ -1,15 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { getDashboardStats } from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
+
+  // 1. Extraemos los datos del técnico que vienen desde la pantalla de Login
+  const { nombreTecnico = 'Técnico Invitado', turnoActivo = 'Sin turno asignado' } = route?.params || {};
+
+  // 2. Estado para guardar los contadores de la base de datos
+  const [stats, setStats] = useState({
+    completados_hoy: 0,
+    pendientes: 0,
+    fallas_abiertas: 0
+  });
+
+  // 3. Carga automática de estadísticas al abrir la pantalla
+  // 3. Carga y actualización automática de estadísticas al ver la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      const loadStats = async () => {
+        try {
+          const data = await getDashboardStats();
+          setStats(data);
+        } catch (error) {
+          console.log("Error cargando estadísticas del dashboard", error);
+        }
+      };
+      
+      loadStats();
+    }, [])
+  );
 
   return (
     <View style={styles.mainContainer}>
       
-      {/* Nuevo fondo oscuro */}
       <Image 
         source={require('../../assets/images/fondo_home.png')} 
         style={[
@@ -25,7 +53,6 @@ export default function HomeScreen({ navigation }) {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: isTablet ? 40 : 20 }]} showsVerticalScrollIndicator={false}>
           
-          {/* Header con textos claros */}
           <View style={styles.header}>
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerSubtitle}>MANTENIMIENTO</Text>
@@ -36,7 +63,6 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Tarjeta Principal: Técnico y Turno */}
           <View style={styles.mainCard}>
             <View style={styles.mainCardTop}>
               <View style={styles.techInfoContainer}>
@@ -45,7 +71,8 @@ export default function HomeScreen({ navigation }) {
                 </View>
                 <View>
                   <Text style={styles.labelText}>TÉCNICO</Text>
-                  <Text style={styles.techName}>Marco Ramón</Text>
+                  {/* Aquí inyectamos el nombre dinámico */}
+                  <Text style={styles.techName}>{nombreTecnico}</Text>
                   <Text style={styles.techRole}>Técnico de Mantenimiento</Text>
                 </View>
               </View>
@@ -62,25 +89,23 @@ export default function HomeScreen({ navigation }) {
                 <MaterialCommunityIcons name="clock-outline" size={22} color="#4b6584" style={styles.shiftIcon} />
                 <View>
                   <Text style={styles.labelText}>TURNO ACTIVO</Text>
-                  <Text style={styles.shiftValue}>06:00 - 14:00</Text>
+                  {/* Aquí inyectamos el turno dinámico */}
+                  <Text style={styles.shiftValue}>{turnoActivo}</Text>
                 </View>
               </View>
               <View style={styles.shiftInfo}>
                 <MaterialCommunityIcons name="timer-outline" size={22} color="#4b6584" style={styles.shiftIcon} />
                 <View>
                   <Text style={styles.labelText}>TIEMPO DE JORNADA</Text>
-                  <Text style={styles.shiftValue}>7 h 04 min <Text style={{fontWeight: '400', color: '#7f8fa6'}}></Text></Text>
+                  <Text style={styles.shiftValue}>En curso <Text style={{fontWeight: '400', color: '#7f8fa6'}}></Text></Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* Título de sección en blanco con sombra para resaltar */}
           <Text style={styles.sectionTitle}>ACCIONES RÁPIDAS</Text>
 
-          {/* Cuadrícula de Acciones */}
           <View style={styles.actionsGrid}>
-            {/* Tarjeta Nuevo Reporte */}
             <TouchableOpacity 
               style={[styles.actionCard, { marginRight: 15 }]}
               onPress={() => navigation.navigate('NewReport')}
@@ -116,12 +141,12 @@ export default function HomeScreen({ navigation }) {
 
           <Text style={styles.sectionTitle}>ESTADO DE MANTENIMIENTO (HOY)</Text>
 
-          {/* Tarjeta de Estadísticas */}
           <View style={styles.statsCard}>
             <View style={styles.statColumn}>
               <MaterialCommunityIcons name="wrench" size={28} color="#0fa5e9" />
               <View style={styles.statTextGroup}>
-                <Text style={styles.statNumber}>5</Text>
+                {/* Contador dinámico de reportes completados */}
+                <Text style={styles.statNumber}>{stats.completados_hoy}</Text>
                 <Text style={styles.statLabel}>Completados{'\n'}hoy</Text>
               </View>
             </View>
@@ -131,7 +156,8 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.statColumn}>
               <MaterialCommunityIcons name="clock-time-four-outline" size={28} color="#f6b93b" />
               <View style={styles.statTextGroup}>
-                <Text style={styles.statNumber}>3</Text>
+                {/* Contador dinámico de pendientes */}
+                <Text style={styles.statNumber}>{stats.pendientes}</Text>
                 <Text style={styles.statLabel}>Pendientes</Text>
               </View>
             </View>
@@ -141,13 +167,13 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.statColumn}>
               <MaterialCommunityIcons name="alert-outline" size={28} color="#e55039" />
               <View style={styles.statTextGroup}>
-                <Text style={styles.statNumber}>1</Text>
+                {/* Contador dinámico de fallas abiertas */}
+                <Text style={styles.statNumber}>{stats.fallas_abiertas}</Text>
                 <Text style={styles.statLabel}>Fallas{'\n'}abiertas</Text>
               </View>
             </View>
           </View>
 
-          {/* Footer en tonos claros */}
           <View style={styles.footer}>
             <MaterialCommunityIcons name="leaf" size={20} color="#94a3b8" style={{ marginRight: 8 }} />
             <View>
@@ -163,16 +189,16 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: '#0f172a' }, // Fondo base oscuro por si la imagen tarda en cargar
+  mainContainer: { flex: 1, backgroundColor: '#0f172a' },
   absoluteBackground: { position: 'absolute', top: 0, bottom: 0, height: '100%' },
   safeArea: { flex: 1, backgroundColor: 'transparent' },
   scrollContent: { paddingTop: 40, paddingBottom: 50 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
   headerTextContainer: { flex: 1 },
-  headerSubtitle: { color: '#38bdf8', fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginBottom: 2 }, // Azul celeste brillante
-  headerTitle: { color: '#ffffff', fontWeight: '900', marginBottom: 5 }, // Blanco puro
-  cursiveText: { color: '#bae6fd', fontStyle: 'italic', fontSize: 14, fontWeight: '600' }, // Celeste claro
+  headerSubtitle: { color: '#38bdf8', fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginBottom: 2 },
+  headerTitle: { color: '#ffffff', fontWeight: '900', marginBottom: 5 },
+  cursiveText: { color: '#bae6fd', fontStyle: 'italic', fontSize: 14, fontWeight: '600' },
   logoutBtn: { backgroundColor: '#ffffff', padding: 12, borderRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },
   
   mainCard: { backgroundColor: '#ffffff', borderRadius: 20, padding: 20, marginBottom: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5 },
@@ -193,7 +219,6 @@ const styles = StyleSheet.create({
   shiftIcon: { marginRight: 10, backgroundColor: '#f5f7fa', padding: 8, borderRadius: 10 },
   shiftValue: { fontSize: 15, fontWeight: '800', color: '#0b1528' },
   
-  // Títulos flotantes en blanco con pequeña sombra para no perderse en partes claras de la foto
   sectionTitle: { 
     fontSize: 12, 
     fontWeight: '700', 
@@ -221,6 +246,6 @@ const styles = StyleSheet.create({
   verticalDivider: { width: 1, backgroundColor: '#f1f2f6', marginHorizontal: 5 },
   
   footer: { flexDirection: 'row', alignItems: 'center' },
-  footerSub: { fontSize: 10, color: '#cbd5e1', letterSpacing: 1, marginBottom: 2 }, // Gris claro
-  footerTitle: { fontSize: 11, color: '#ffffff', fontWeight: '800', letterSpacing: 1 } // Blanco
+  footerSub: { fontSize: 10, color: '#cbd5e1', letterSpacing: 1, marginBottom: 2 },
+  footerTitle: { fontSize: 11, color: '#ffffff', fontWeight: '800', letterSpacing: 1 }
 });

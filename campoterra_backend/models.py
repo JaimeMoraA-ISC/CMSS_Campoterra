@@ -63,3 +63,15 @@ class Usuario(Base):
     password = Column(String(255))  # Aquí guardaremos la contraseña
     rol = Column(String(50), default="Administrador")  # Para control interno
     activo = Column(Boolean, default=True) # Por si algún día cambian de encargado
+
+    from sqlalchemy import Column, Integer, String
+
+class Pieza(Base):
+    __tablename__ = "piezas"
+    
+    id_pieza = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)
+    codigo = Column(String(50), unique=True, nullable=False)
+    stock = Column(Integer, default=0)
+    categoria = Column(String(50), default="General")
+    icon = Column(String(50), default="cog-outline") # Para el ícono en la app

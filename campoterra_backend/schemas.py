@@ -53,3 +53,21 @@ class BitacoraResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from pydantic import BaseModel
+
+class PiezaBase(BaseModel):
+    nombre: str
+    codigo: str
+    stock: int
+    categoria: str
+    icon: str
+
+class PiezaCreate(PiezaBase):
+    pass
+
+class PiezaResponse(PiezaBase):
+    id_pieza: int
+    
+    class Config:
+        from_attributes = True

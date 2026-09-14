@@ -58,7 +58,10 @@ export default function LoginScreen({ navigation }) {
     try {
       const response = await startShift(tecnico, turno);
       console.log('Jornada iniciada:', response);
-      navigation.replace('Home');
+      navigation.replace('Home', { 
+  nombreTecnico: tecnico, 
+  turnoActivo: turno 
+});
     } catch (error) {
       Alert.alert('Error de Conexión', error.message);
     } finally {
