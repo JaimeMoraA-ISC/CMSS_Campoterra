@@ -141,7 +141,9 @@
 
             datos.forEach(b => {
                 let badgeColor = b.tipo_mantenimiento === 'Preventivo' ? 'bg-success' : 'bg-danger';
-                let fechaCorta = new Date(b.fecha_registro).toLocaleDateString('es-MX');
+                let fechaCorta = b.fecha_registro
+                    ? new Date(b.fecha_registro).toLocaleDateString('es-MX')
+                    : 'Sin fecha';
 
                 tbody.innerHTML += `
                     <tr>
@@ -172,12 +174,12 @@
             if (fInicio) {
                 const fechaInicio = new Date(fInicio);
                 fechaInicio.setHours(0,0,0,0);
-                filtrados = filtrados.filter(b => new Date(b.fecha_registro) >= fechaInicio);
+                filtrados = filtrados.filter(b => b.fecha_registro && new Date(b.fecha_registro) >= fechaInicio);
             }
             if (fFin) {
                 const fechaFin = new Date(fFin);
                 fechaFin.setHours(23,59,59,999);
-                filtrados = filtrados.filter(b => new Date(b.fecha_registro) <= fechaFin);
+                filtrados = filtrados.filter(b => b.fecha_registro && new Date(b.fecha_registro) <= fechaFin);
             }
 
             renderizarTabla(filtrados);

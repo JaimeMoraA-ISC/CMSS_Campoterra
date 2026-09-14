@@ -44,7 +44,7 @@ class Tecnico(TecnicoBase):
 # ==========================================
 class BitacoraResponse(BaseModel):
     id_bitacora: int
-    fecha_registro: datetime
+    fecha_registro: Optional[datetime] = None
     nombre_equipo: str
     nombre_tecnico: str
     tipo_mantenimiento: str

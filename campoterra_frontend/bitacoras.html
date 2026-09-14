@@ -144,7 +144,9 @@
                     bitacoras.forEach(b => {
                         let badgeColor = b.tipo_mantenimiento === 'Preventivo' ? 'bg-info' : 'bg-warning text-dark';
                         // Formateamos la fecha si viene en string
-                        let fechaFormateada = new Date(b.fecha_registro).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+                        let fechaFormateada = b.fecha_registro
+                            ? new Date(b.fecha_registro).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+                            : 'Sin fecha';
 
                         tbody.innerHTML += `
                             <tr>

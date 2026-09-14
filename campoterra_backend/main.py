@@ -95,8 +95,8 @@ def crear_bitacora(bitacora: BitacoraCreate, db: Session = Depends(get_db)):
         id_turno=bitacora.id_turno,
         tipo_mantenimiento=bitacora.tipo_mantenimiento,
         descripcion=bitacora.descripcion,
-        detalles_repuestos=bitacora.detalles_repuestos
-        # id_bitacora y fecha_registro se generan solos en MySQL
+        detalles_repuestos=bitacora.detalles_repuestos,
+        fecha_registro=datetime.now(),
     )
     
     # Guardamos en la base de datos
@@ -333,7 +333,7 @@ def obtener_bitacoras(db: Session = Depends(get_db)):
     for r in resultados:
         bitacoras_formateadas.append({
             "id_bitacora": r.id_bitacora,
-            "fecha_registro": r.fecha_registro or datetime.now(), # <--- Aquí está el salvavidas aplicado
+            "fecha_registro": r.fecha_registro,
             "nombre_equipo": r.nombre_equipo,
             "nombre_tecnico": r.nombre_tecnico,
             "tipo_mantenimiento": r.tipo_mantenimiento,
@@ -378,7 +378,8 @@ def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)
         id_turno=report.turno_id,
         tipo_mantenimiento=report.tipo_trabajo,
         descripcion=report.descripcion,
-        detalles_repuestos=detalles_texto
+        detalles_repuestos=detalles_texto,
+        fecha_registro=datetime.now(),
     )
     
     db.add(nueva_bitacora)

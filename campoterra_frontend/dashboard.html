@@ -401,7 +401,9 @@
                         
                         // ACTUALIZADO: Variables alineadas con FastAPI
                         fila.innerHTML = `
-                            <td class="align-middle">${new Date(bitacora.fecha_registro).toLocaleString('es-MX')}</td>
+                            <td class="align-middle">${bitacora.fecha_registro
+                                ? new Date(bitacora.fecha_registro).toLocaleString('es-MX')
+                                : 'Sin fecha'}</td>
                             <td class="align-middle"><i class="fas fa-hdd text-secondary me-2"></i> ${bitacora.nombre_equipo}</td>
                             <td class="align-middle text-primary"><i class="far fa-user me-2"></i> ${bitacora.nombre_tecnico}</td>
                             <td class="align-middle">
