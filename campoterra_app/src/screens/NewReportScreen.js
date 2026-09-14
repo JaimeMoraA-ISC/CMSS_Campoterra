@@ -203,6 +203,16 @@ useEffect(() => {
     const existing = cart.find(
       c => c.partId === partId
     );
+    const part = partsInventory.find(p => p.id === partId);
+    const currentQty = existing ? existing.qty : 0;
+
+    if (part && currentQty >= part.stock) {
+      Alert.alert(
+        'Stock insuficiente',
+        `Solo hay ${part.stock} unidad${part.stock === 1 ? '' : 'es'} disponible${part.stock === 1 ? '' : 's'} de ${part.name}.`
+      );
+      return;
+    }
 
     if (existing) {
 
@@ -341,7 +351,7 @@ useEffect(() => {
 
       Alert.alert(
         'Error',
-        'No se pudo guardar el reporte. Verifica tu conexión.'
+        error.message || 'No se pudo guardar el reporte. Verifica tu conexión.'
       );
 
     }

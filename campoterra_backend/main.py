@@ -360,17 +360,48 @@ class NuevoReporteRequest(BaseModel):
 # Ruta para recibir y guardar el reporte
 @app.post("/api/reports/new", tags=["App Móvil Técnicos"])
 def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)):
-    # Buscamos los nombres reales de las piezas en la Base de Datos
-    if report.piezas:
-        lista_detalles = []
-        for p in report.piezas:
-            pieza_db = db.query(models.Pieza).filter(models.Pieza.id_pieza == p.partId).first()
-            nombre_pieza = pieza_db.nombre if pieza_db else f"Pieza ID {p.partId}"
-            lista_detalles.append(f"{nombre_pieza} (Cant: {p.qty})")
-        
-        detalles_texto = ", ".join(lista_detalles)
-    else:
-        detalles_texto = None
+    cantidades_por_pieza = {}
+    for pieza in report.piezas:
+        if pieza.qty <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail=f"La cantidad de la pieza {pieza.partId} debe ser mayor que cero.",
+            )
+        cantidades_por_pieza[pieza.partId] = (
+            cantidades_por_pieza.get(pieza.partId, 0) + pieza.qty
+        )
+
+    piezas_db = {}
+    for part_id, cantidad in cantidades_por_pieza.items():
+        pieza_db = (
+            db.query(models.Pieza)
+            .filter(models.Pieza.id_pieza == part_id)
+            .with_for_update()
+            .first()
+        )
+        if not pieza_db:
+            raise HTTPException(
+                status_code=404,
+                detail=f"La pieza {part_id} no existe en el inventario.",
+            )
+        if pieza_db.stock < cantidad:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Stock insuficiente para {pieza_db.nombre}. "
+                    f"Disponible: {pieza_db.stock}; solicitado: {cantidad}."
+                ),
+            )
+        piezas_db[part_id] = pieza_db
+
+    detalles_texto = None
+    if piezas_db:
+        detalles_texto = ", ".join(
+            f"{pieza.nombre} (Cant: {cantidades_por_pieza[part_id]})"
+            for part_id, pieza in piezas_db.items()
+        )
+        for part_id, pieza in piezas_db.items():
+            pieza.stock -= cantidades_por_pieza[part_id]
     
     nueva_bitacora = models.Bitacora(
         id_equipo=report.equipo_id,
