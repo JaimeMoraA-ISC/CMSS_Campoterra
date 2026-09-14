@@ -217,6 +217,31 @@
             </div>
         </div>
 
+        <!-- RESUMEN SEMANAL: domingo a sábado -->
+        <div class="container-fluid px-4 mb-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h5 class="mb-1 text-secondary"><strong>RESUMEN SEMANAL</strong></h5>
+                        <small class="text-muted" id="semana-periodo">Cargando periodo...</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="selectorSemana" class="small text-muted">Semana</label>
+                        <input id="selectorSemana" type="number" min="1" max="53" class="form-control" style="width: 90px;">
+                        <input id="selectorAnio" type="number" min="2000" max="2100" class="form-control" style="width: 105px;">
+                        <button id="btnCargarSemana" class="btn btn-primary">
+                            <i class="fas fa-calendar-week me-1"></i> Consultar
+                        </button>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="bg-light rounded p-3"><small class="text-muted">TOTAL DE BITÁCORAS</small><h3 id="semana-total" class="mb-0">0</h3></div></div>
+                    <div class="col-md-4"><div class="bg-light rounded p-3"><small class="text-muted">PREVENTIVOS</small><h3 id="semana-preventivos" class="mb-0 text-success">0</h3></div></div>
+                    <div class="col-md-4"><div class="bg-light rounded p-3"><small class="text-muted">CORRECTIVOS</small><h3 id="semana-correctivos" class="mb-0 text-danger">0</h3></div></div>
+                </div>
+            </div>
+        </div>
+
         <!-- SECCIÓN DE GRÁFICAS -->
         <div class="container-fluid px-4 mb-4">
             <div class="row g-3">
@@ -423,6 +448,46 @@
         }
 
         document.addEventListener('DOMContentLoaded', cargarBitacoras);
+
+        function obtenerSemanaActual() {
+            const ahora = new Date();
+            const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+            const inicioSemanaUno = new Date(inicioAnio);
+            inicioSemanaUno.setDate(inicioAnio.getDate() - inicioAnio.getDay());
+            const inicioSemanaActual = new Date(ahora);
+            inicioSemanaActual.setDate(ahora.getDate() - ahora.getDay());
+            return {
+                anio: ahora.getFullYear(),
+                semana: Math.floor((inicioSemanaActual - inicioSemanaUno) / (7 * 24 * 60 * 60 * 1000)) + 1
+            };
+        }
+
+        async function cargarResumenSemanal() {
+            const respuesta = await fetch(`http://localhost:8000/api/dashboard/weekly?year=${document.getElementById('selectorAnio').value}&week=${document.getElementById('selectorSemana').value}`);
+            const datos = await respuesta.json();
+            if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo cargar la semana');
+
+            const formatoFecha = fecha => new Date(`${fecha}T12:00:00`).toLocaleDateString('es-MX');
+            document.getElementById('semana-periodo').innerText = `Semana ${datos.week} de ${datos.year}: ${formatoFecha(datos.inicio)} al ${formatoFecha(datos.fin)}`;
+            document.getElementById('semana-total').innerText = datos.total;
+            document.getElementById('semana-preventivos').innerText = datos.preventivos;
+            document.getElementById('semana-correctivos').innerText = datos.correctivos;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const semanaActual = obtenerSemanaActual();
+            document.getElementById('selectorAnio').value = semanaActual.anio;
+            document.getElementById('selectorSemana').value = semanaActual.semana;
+            cargarResumenSemanal().catch(error => {
+                document.getElementById('semana-periodo').innerText = error.message;
+            });
+        });
+
+        document.getElementById('btnCargarSemana').addEventListener('click', () => {
+            cargarResumenSemanal().catch(error => {
+                document.getElementById('semana-periodo').innerText = error.message;
+            });
+        });
 
         // ==========================================
         // LÓGICA DEL BUSCADOR EN TIEMPO REAL

@@ -6,7 +6,7 @@ from database import engine, get_db
 from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 app = FastAPI(title="API Campoterra CMMS")
 
@@ -467,6 +467,81 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         "completados_hoy": completados_hoy,
         "pendientes": 0, # Marcador fijo por ahora
         "fallas_abiertas": fallas
+    }
+
+def obtener_periodo_semana(year: int, week: int):
+    inicio_anio = date(year, 1, 1)
+    inicio_semana_uno = inicio_anio - timedelta(days=(inicio_anio.weekday() + 1) % 7)
+    inicio_semana = inicio_semana_uno + timedelta(days=(week - 1) * 7)
+    inicio_siguiente_semana = inicio_semana + timedelta(days=7)
+    max_semana = ((date(year + 1, 1, 1) - inicio_semana_uno).days + 6) // 7
+
+    if week < 1 or week > max_semana:
+        raise HTTPException(
+            status_code=422,
+            detail=f"La semana debe estar entre 1 y {max_semana} para el año {year}.",
+        )
+
+    return inicio_semana, inicio_siguiente_semana
+
+@app.get("/api/dashboard/weekly", tags=["Dashboard Web"])
+def get_weekly_dashboard(
+    year: Optional[int] = None,
+    week: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    hoy = date.today()
+    year = year or hoy.year
+    if week is None:
+        inicio_semana_actual = hoy - timedelta(days=(hoy.weekday() + 1) % 7)
+        inicio_anio = date(year, 1, 1)
+        inicio_semana_uno = inicio_anio - timedelta(days=(inicio_anio.weekday() + 1) % 7)
+        week = ((inicio_semana_actual - inicio_semana_uno).days // 7) + 1
+
+    inicio_semana, inicio_siguiente_semana = obtener_periodo_semana(year, week)
+    bitacoras = (
+        db.query(
+            models.Bitacora.id_bitacora,
+            models.Bitacora.fecha_registro,
+            models.Bitacora.tipo_mantenimiento,
+            models.Bitacora.descripcion,
+            models.Bitacora.detalles_repuestos,
+            models.Equipo.nombre.label("nombre_equipo"),
+            models.Tecnico.nombre.label("nombre_tecnico"),
+        )
+        .join(models.Equipo, models.Bitacora.id_equipo == models.Equipo.id_equipo)
+        .join(models.Tecnico, models.Bitacora.id_tecnico == models.Tecnico.id_tecnico)
+        .filter(
+            models.Bitacora.fecha_registro >= datetime.combine(inicio_semana, datetime.min.time()),
+            models.Bitacora.fecha_registro < datetime.combine(inicio_siguiente_semana, datetime.min.time()),
+        )
+        .order_by(models.Bitacora.fecha_registro.desc())
+        .all()
+    )
+
+    preventivos = sum(1 for bitacora in bitacoras if bitacora.tipo_mantenimiento == "Preventivo")
+    correctivos = sum(1 for bitacora in bitacoras if bitacora.tipo_mantenimiento == "Correctivo")
+
+    return {
+        "year": year,
+        "week": week,
+        "inicio": inicio_semana.isoformat(),
+        "fin": (inicio_siguiente_semana - timedelta(days=1)).isoformat(),
+        "total": len(bitacoras),
+        "preventivos": preventivos,
+        "correctivos": correctivos,
+        "bitacoras": [
+            {
+                "id_bitacora": bitacora.id_bitacora,
+                "fecha_registro": bitacora.fecha_registro,
+                "tipo_mantenimiento": bitacora.tipo_mantenimiento,
+                "descripcion": bitacora.descripcion,
+                "detalles_repuestos": bitacora.detalles_repuestos,
+                "nombre_equipo": bitacora.nombre_equipo,
+                "nombre_tecnico": bitacora.nombre_tecnico,
+            }
+            for bitacora in bitacoras
+        ],
     }
 
 @app.get("/api/piezas/", response_model=list[schemas.PiezaResponse], tags=["Catálogos del Sistema"])
