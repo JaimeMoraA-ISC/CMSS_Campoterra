@@ -460,25 +460,40 @@ async def create_urgent_alert(alerta: AlertaUrgenteRequest):
 
 @app.get("/api/dashboard/stats", tags=["App Móvil Técnicos"])
 def get_dashboard_stats(db: Session = Depends(get_db)):
-    # Contamos únicamente las bitácoras registradas durante el día actual.
+    # Todos los indicadores de actividad se calculan con la fecha de registro de
+    # la bitácora, no con el estado actual del equipo.
     inicio_hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     inicio_manana = inicio_hoy + timedelta(days=1)
-    completados_hoy = (
+    bitacoras_hoy = (
         db.query(models.Bitacora)
         .filter(
             models.Bitacora.fecha_registro >= inicio_hoy,
             models.Bitacora.fecha_registro < inicio_manana,
         )
-        .count()
+        .all()
     )
-    
-    # Contamos los equipos que están en mantenimiento
-    fallas = db.query(models.Equipo).filter(models.Equipo.estado == "En Mantenimiento").count()
-    
+
+    completados_hoy = len(bitacoras_hoy)
+    correctivos_hoy = sum(
+        1
+        for bitacora in bitacoras_hoy
+        if (bitacora.tipo_mantenimiento or "").strip().lower() == "correctivo"
+    )
+    preventivos_hoy = sum(
+        1
+        for bitacora in bitacoras_hoy
+        if (bitacora.tipo_mantenimiento or "").strip().lower() == "preventivo"
+    )
+    porcentaje_preventivos = round(
+        (preventivos_hoy / completados_hoy) * 100
+    ) if completados_hoy else 0
+
     return {
         "completados_hoy": completados_hoy,
         "pendientes": 0, # Marcador fijo por ahora
-        "fallas_abiertas": fallas
+        "fallas_abiertas": correctivos_hoy,
+        "alertas_criticas": correctivos_hoy,
+        "preventivos": porcentaje_preventivos,
     }
 
 def obtener_periodo_semana(year: int, week: int):
