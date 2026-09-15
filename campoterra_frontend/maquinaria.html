@@ -176,12 +176,13 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
         // Función para cargar los equipos desde MySQL
         async function cargarEquipos() {
             try {
                 // Suponiendo que tienes esta ruta GET en tu main.py
-                const respuesta = await fetch('http://localhost:8000/api/equipos/');
+                const respuesta = await authenticatedFetch('http://localhost:8000/api/equipos/');
                 if (respuesta.ok) {
                     const equipos = await respuesta.json();
                     const cuerpoTabla = document.querySelector('#tabla-equipos tbody');
@@ -230,7 +231,7 @@
             }
 
             try {
-                const respuesta = await fetch('http://localhost:8000/api/equipos/', {
+                const respuesta = await authenticatedFetch('http://localhost:8000/api/equipos/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     // Armamos el JSON con los nombres exactos de tu EquipoCreate
@@ -275,7 +276,7 @@
             // Confirmación de seguridad antes de borrar
             if(confirm("¿Estás seguro de que deseas eliminar este equipo del sistema?")) {
                 try {
-                    const respuesta = await fetch(`http://localhost:8000/api/equipos/${id}`, {
+                    const respuesta = await authenticatedFetch(`http://localhost:8000/api/equipos/${id}`, {
                         method: 'DELETE'
                     });
 
@@ -312,7 +313,7 @@
             const estado = document.getElementById('editEstadoEquipo').value; // Capturamos el Select
 
             try {
-                const respuesta = await fetch(`http://localhost:8000/api/equipos/${id}`, {
+                const respuesta = await authenticatedFetch(`http://localhost:8000/api/equipos/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 

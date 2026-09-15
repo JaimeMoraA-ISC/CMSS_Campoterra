@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date, datetime, timedelta
+from auth import create_access_token, hash_password, require_dashboard_user, verify_password
 
 app = FastAPI(title="API Campoterra CMMS")
 
@@ -27,7 +28,7 @@ def ruta_raiz():
 
 # Endpoint para obtener todos los equipos
 @app.get("/equipos/", response_model=list[schemas.Equipo])
-def obtener_equipos(db: Session = Depends(get_db)):
+def obtener_equipos(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     # Le pedimos a SQLAlchemy que traiga todos los registros de la tabla Equipos
     equipos = db.query(models.Equipo).all()
     return equipos
@@ -118,57 +119,38 @@ class UsuarioCreate(BaseModel):
     password: str
     rol: Optional[str] = "Administrador"
 
-# 2. La ruta POST para registrar usuarios en la base de datos
 @app.post("/api/usuarios/", tags=["Seguridad y Accesos"])
 def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
-    """
-    Registra un nuevo usuario en el sistema. 
-    (Nota para la memoria técnica: En una fase de producción final, 
-    la contraseña deberá ser encriptada mediante librerías como Passlib).
-    """
     nuevo_usuario = models.Usuario(
         username=usuario.username,
-        password=usuario.password, 
-        rol=usuario.rol
+        password=hash_password(usuario.password),
+        rol=usuario.rol,
     )
-    
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
-    
-    return {
-        "mensaje": "¡Usuario creado con éxito!", 
-        "id_usuario": nuevo_usuario.id_usuario,
-        "username": nuevo_usuario.username
-    }
+    return {"mensaje": "¡Usuario creado con éxito!", "id_usuario": nuevo_usuario.id_usuario, "username": nuevo_usuario.username}
 
-# 1. El molde para recibir las credenciales de la pantalla de Login
 class UsuarioLogin(BaseModel):
     username: str
     password: str
 
-# 2. La ruta para validar el acceso
 @app.post("/api/login/", tags=["Seguridad y Accesos"])
 def iniciar_sesion(credenciales: UsuarioLogin, db: Session = Depends(get_db)):
-    """
-    Verifica las credenciales ingresadas. Si son correctas, autoriza la entrada.
-    """
-    # Buscamos al usuario en la base de datos
     usuario_db = db.query(models.Usuario).filter(models.Usuario.username == credenciales.username).first()
-    
-    # Si el usuario no existe o la contraseña no coincide, bloqueamos el paso
-    if not usuario_db or usuario_db.password != credenciales.password:
+    if not usuario_db or not verify_password(credenciales.password, usuario_db.password):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    
-    # Por seguridad, revisamos que el usuario siga activo en la empresa
     if not usuario_db.activo:
         raise HTTPException(status_code=403, detail="Esta cuenta ha sido dada de baja")
-    
-    # Si pasa todos los filtros, le damos acceso
+    if usuario_db.password and not usuario_db.password.startswith("pbkdf2_sha256$"):
+        usuario_db.password = hash_password(credenciales.password)
+        db.commit()
     return {
         "mensaje": f"¡Bienvenido al CMMS, {usuario_db.rol}!",
         "username": usuario_db.username,
-        "rol": usuario_db.rol
+        "rol": usuario_db.rol,
+        "access_token": create_access_token(usuario_db.username, usuario_db.rol),
+        "token_type": "bearer",
     }
 
 # ESQUEMAS (MOLDES) PARA LOS CATÁLOGOS
@@ -189,7 +171,7 @@ class TecnicoCreate(BaseModel):
 # RUTAS PARA REGISTRAR EQUIPOS Y TÉCNICOS
 
 @app.post("/api/equipos/", tags=["Catálogos del Sistema"])
-def registrar_equipo(equipo: EquipoCreate, db: Session = Depends(get_db)):
+def registrar_equipo(equipo: EquipoCreate, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     """
     Da de alta una nueva máquina o equipo en la planta.
     """
@@ -211,7 +193,11 @@ def registrar_equipo(equipo: EquipoCreate, db: Session = Depends(get_db)):
     }
 
 @app.post("/api/tecnicos/", tags=["Catálogos del Sistema"])
-def registrar_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
+def registrar_tecnico(
+    tecnico: TecnicoCreate,
+    user: dict = Depends(require_dashboard_user),
+    db: Session = Depends(get_db),
+):
     """
     Registra a un nuevo técnico de mantenimiento.
     """
@@ -230,7 +216,7 @@ def registrar_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
     }
 
 @app.get("/api/equipos/", tags=["Catálogos del Sistema"])
-def obtener_todos_los_equipos(db: Session = Depends(get_db)):
+def obtener_todos_los_equipos(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     """
     Devuelve la lista completa de equipos registrados. 
     Ideal para llenar menús desplegables (dropdowns) en la app.
@@ -239,7 +225,7 @@ def obtener_todos_los_equipos(db: Session = Depends(get_db)):
     return lista_equipos
 
 @app.get("/api/tecnicos/", tags=["Catálogos del Sistema"])
-def obtener_todos_los_tecnicos(db: Session = Depends(get_db)):
+def obtener_todos_los_tecnicos(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     """
     Devuelve la lista completa de técnicos activos en la planta.
     """
@@ -264,7 +250,7 @@ def registrar_equipo(equipo: schemas.EquipoCreate, db: Session = Depends(get_db)
     return nuevo_equipo
 
 @app.delete("/api/equipos/{equipo_id}", tags=["Catálogo de Maquinaria"])
-def eliminar_equipo(equipo_id: int, db: Session = Depends(get_db)):
+def eliminar_equipo(equipo_id: int, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     # Buscamos el equipo por su ID
     equipo = db.query(models.Equipo).filter(models.Equipo.id_equipo == equipo_id).first()
     
@@ -275,7 +261,7 @@ def eliminar_equipo(equipo_id: int, db: Session = Depends(get_db)):
     return {"error": "Equipo no encontrado"}
 
 @app.put("/api/equipos/{equipo_id}", tags=["Catálogo de Maquinaria"])
-def actualizar_equipo(equipo_id: int, equipo_actualizado: schemas.EquipoCreate, db: Session = Depends(get_db)):
+def actualizar_equipo(equipo_id: int, equipo_actualizado: schemas.EquipoCreate, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     equipo = db.query(models.Equipo).filter(models.Equipo.id_equipo == equipo_id).first()
     
     if equipo:
@@ -291,7 +277,7 @@ def actualizar_equipo(equipo_id: int, equipo_actualizado: schemas.EquipoCreate, 
     return {"error": "Equipo no encontrado"}
 
 @app.put("/api/tecnicos/{tecnico_id}", tags=["Control de Personal"])
-def actualizar_tecnico(tecnico_id: int, tecnico_actualizado: schemas.TecnicoBase, db: Session = Depends(get_db)):
+def actualizar_tecnico(tecnico_id: int, tecnico_actualizado: schemas.TecnicoBase, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     tecnico = db.query(models.Tecnico).filter(models.Tecnico.id_tecnico == tecnico_id).first()
     
     if tecnico:
@@ -305,7 +291,7 @@ def actualizar_tecnico(tecnico_id: int, tecnico_actualizado: schemas.TecnicoBase
     return {"error": "Técnico no encontrado"}
 
 @app.delete("/api/tecnicos/{tecnico_id}", tags=["Control de Personal"])
-def eliminar_tecnico(tecnico_id: int, db: Session = Depends(get_db)):
+def eliminar_tecnico(tecnico_id: int, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     # 1. Buscamos al técnico por su ID
     tecnico = db.query(models.Tecnico).filter(models.Tecnico.id_tecnico == tecnico_id).first()
     
@@ -318,7 +304,7 @@ def eliminar_tecnico(tecnico_id: int, db: Session = Depends(get_db)):
     return {"error": "Técnico no encontrado"}
 
 @app.get("/api/bitacoras/", response_model=list[schemas.BitacoraResponse], tags=["Historial de Bitácoras"])
-def obtener_bitacoras(db: Session = Depends(get_db)):
+def obtener_bitacoras(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     # 1. Hacemos la consulta con los JOIN
     resultados = db.query(
         models.Bitacora.id_bitacora,
@@ -459,7 +445,7 @@ async def create_urgent_alert(alerta: AlertaUrgenteRequest):
     }
 
 @app.get("/api/dashboard/stats", tags=["App Móvil Técnicos"])
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     # Todos los indicadores de actividad se calculan con la fecha de registro de
     # la bitácora, no con el estado actual del equipo.
     inicio_hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -515,7 +501,7 @@ def obtener_periodo_semana(year: int, week: int):
 def get_weekly_dashboard(
     year: Optional[int] = None,
     week: Optional[int] = None,
-    db: Session = Depends(get_db),
+    user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db),
 ):
     hoy = date.today()
     year = year or hoy.year
@@ -572,12 +558,12 @@ def get_weekly_dashboard(
     }
 
 @app.get("/api/piezas/", response_model=list[schemas.PiezaResponse], tags=["Catálogos del Sistema"])
-def obtener_piezas(db: Session = Depends(get_db)):
+def obtener_piezas(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     """Devuelve el inventario completo para la App y el Dashboard"""
     return db.query(models.Pieza).all()
 
 @app.post("/api/piezas/", response_model=schemas.PiezaResponse, tags=["Catálogos del Sistema"])
-def registrar_pieza(pieza: schemas.PiezaCreate, db: Session = Depends(get_db)):
+def registrar_pieza(pieza: schemas.PiezaCreate, user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     """Permite al Dashboard Web agregar nuevas piezas"""
     nueva_pieza = models.Pieza(**pieza.dict())
     db.add(nueva_pieza)
@@ -593,7 +579,7 @@ class EntradaPiezaRequest(BaseModel):
 def registrar_entrada_pieza(
     pieza_id: int,
     entrada: EntradaPiezaRequest,
-    db: Session = Depends(get_db),
+    user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db),
 ):
     if entrada.cantidad <= 0:
         raise HTTPException(status_code=422, detail="La cantidad debe ser mayor que cero.")
@@ -620,7 +606,7 @@ def registrar_entrada_pieza(
     return pieza
 
 @app.get("/api/inventario/movimientos", response_model=list[schemas.MovimientoPiezaResponse], tags=["Inventario"])
-def obtener_movimientos_inventario(db: Session = Depends(get_db)):
+def obtener_movimientos_inventario(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
     movimientos = (
         db.query(
             models.MovimientoPieza.id_movimiento,

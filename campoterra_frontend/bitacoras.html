@@ -123,6 +123,7 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
         // Lógica del buscador
         document.getElementById('buscadorBitacoras').addEventListener('keyup', function() {
@@ -136,7 +137,7 @@
         // Función para cargar bitácoras desde FastAPI
         async function cargarBitacoras() {
             try {
-                const respuesta = await fetch('http://localhost:8000/api/bitacoras/');
+                const respuesta = await authenticatedFetch('http://localhost:8000/api/bitacoras/');
                 if (respuesta.ok) {
                     const bitacoras = await respuesta.json();
                     const tbody = document.querySelector('#tabla-bitacoras tbody');

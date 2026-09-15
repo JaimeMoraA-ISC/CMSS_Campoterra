@@ -303,12 +303,13 @@
 
     </div>
 
-  <script>
+  <script src="auth.js"></script>
+    <script>
        async function cargarBitacoras() {
             try {
                 const [respuestaBitacoras, respuestaStats] = await Promise.all([
-                    fetch('http://localhost:8000/api/bitacoras/'),
-                    fetch('http://localhost:8000/api/dashboard/stats')
+                    authenticatedFetch('http://localhost:8000/api/bitacoras/'),
+                    authenticatedFetch('http://localhost:8000/api/dashboard/stats')
                 ]);
                 if (respuestaBitacoras.ok && respuestaStats.ok) {
                     const bitacoras = await respuestaBitacoras.json();
@@ -459,7 +460,7 @@
         }
 
         async function cargarResumenSemanal() {
-            const respuesta = await fetch(`http://localhost:8000/api/dashboard/weekly?year=${document.getElementById('selectorAnio').value}&week=${document.getElementById('selectorSemana').value}`);
+            const respuesta = await authenticatedFetch(`http://localhost:8000/api/dashboard/weekly?year=${document.getElementById('selectorAnio').value}&week=${document.getElementById('selectorSemana').value}`);
             const datos = await respuesta.json();
             if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo cargar la semana');
 
