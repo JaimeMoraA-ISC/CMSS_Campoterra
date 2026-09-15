@@ -155,6 +155,7 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
         // ==========================================
         // LÓGICA DE BÚSQUEDA
@@ -174,7 +175,7 @@
         // ==========================================
         async function cargarTecnicos() {
             try {
-                const respuesta = await fetch('http://localhost:8000/api/tecnicos/');
+                const respuesta = await authenticatedFetch('http://localhost:8000/api/tecnicos/');
                 if (respuesta.ok) {
                     const tecnicos = await respuesta.json();
                     const cuerpoTabla = document.querySelector('#tabla-personal tbody');
@@ -217,7 +218,7 @@
             }
 
             try {
-                const respuesta = await fetch('http://localhost:8000/api/tecnicos/', {
+                const respuesta = await authenticatedFetch('http://localhost:8000/api/tecnicos/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -245,7 +246,7 @@
         async function borrarTecnico(id) {
             if(confirm("¿Estás seguro de que deseas eliminar este registro?")) {
                 try {
-                    const respuesta = await fetch(`http://localhost:8000/api/tecnicos/${id}`, { method: 'DELETE' });
+                    const respuesta = await authenticatedFetch(`http://localhost:8000/api/tecnicos/${id}`, { method: 'DELETE' });
                     if (respuesta.ok) cargarTecnicos();
                 } catch (error) {
                     console.error("Error en DELETE:", error);
@@ -271,7 +272,7 @@
             const estado = document.getElementById('editEstadoTecnico').value;
 
             try {
-                const respuesta = await fetch(`http://localhost:8000/api/tecnicos/${id}`, {
+                const respuesta = await authenticatedFetch(`http://localhost:8000/api/tecnicos/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 

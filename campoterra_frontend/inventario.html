@@ -82,6 +82,7 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
         const API = 'http://localhost:8000';
         const mensaje = document.getElementById('mensaje');
@@ -90,7 +91,7 @@
             mensaje.className = `alert alert-${tipo}`;
         }
         async function cargarInventario() {
-            const respuesta = await fetch(`${API}/api/piezas/`);
+            const respuesta = await authenticatedFetch(`${API}/api/piezas/`);
             if (!respuesta.ok) throw new Error('No se pudo cargar el inventario.');
             const piezas = await respuesta.json();
             const tabla = document.getElementById('tabla-inventario');
@@ -104,7 +105,7 @@
             });
         }
         async function cargarMovimientos() {
-            const respuesta = await fetch(`${API}/api/inventario/movimientos`);
+            const respuesta = await authenticatedFetch(`${API}/api/inventario/movimientos`);
             if (!respuesta.ok) throw new Error('No se pudo cargar el historial.');
             const movimientos = await respuesta.json();
             const tabla = document.getElementById('tabla-movimientos');
@@ -117,7 +118,7 @@
         document.getElementById('formEntradaPieza').addEventListener('submit', async event => {
             event.preventDefault();
             try {
-                const respuesta = await fetch(`${API}/api/piezas/${document.getElementById('entradaPieza').value}/entradas`, {
+                const respuesta = await authenticatedFetch(`${API}/api/piezas/${document.getElementById('entradaPieza').value}/entradas`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({

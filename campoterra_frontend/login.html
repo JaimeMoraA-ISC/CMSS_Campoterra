@@ -376,6 +376,11 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    const storage = document.getElementById('recordarme').checked
+                        ? localStorage
+                        : sessionStorage;
+                    storage.setItem('campoterra_access_token', data.access_token);
+                    storage.setItem('campoterra_username', data.username);
                     window.location.href = 'dashboard.html';
                 } else {
                     alerta.classList.remove('d-none');
