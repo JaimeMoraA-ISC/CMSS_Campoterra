@@ -170,7 +170,7 @@
                             <div>
                                 <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">ALERTAS CRÍTICAS</h6>
                                 <h3 class="mb-0 fw-bold text-danger" id="kpi-alertas">0</h3>
-                                <small class="text-muted">Incidencias no resueltas</small>
+                                <small class="text-muted">Correctivos registrados hoy</small>
                             </div>
                             <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger">
                                 <i class="fas fa-exclamation-triangle fs-4"></i>
@@ -186,7 +186,7 @@
                             <div>
                                 <h6 class="text-muted mb-1" style="font-size: 12px; font-weight: bold;">PREVENTIVOS</h6>
                                 <h3 class="mb-0 fw-bold text-success" id="kpi-preventivos">0%</h3>
-                                <small class="text-muted">Tareas cumplidas hoy</small>
+                                <small class="text-muted">Porcentaje de bitácoras preventivas hoy</small>
                             </div>
                             <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success">
                                 <i class="fas fa-shield-alt fs-4"></i>
@@ -306,34 +306,29 @@
   <script>
        async function cargarBitacoras() {
             try {
-                const respuesta = await fetch('http://localhost:8000/api/bitacoras/');
-                if (respuesta.ok) {
-                    const bitacoras = await respuesta.json();
+                const [respuestaBitacoras, respuestaStats] = await Promise.all([
+                    fetch('http://localhost:8000/api/bitacoras/'),
+                    fetch('http://localhost:8000/api/dashboard/stats')
+                ]);
+                if (respuestaBitacoras.ok && respuestaStats.ok) {
+                    const bitacoras = await respuestaBitacoras.json();
+                    const stats = await respuestaStats.json();
                     
                     // ==========================================
                     // LÓGICA PARA LOS INDICADORES (KPIs)
                     // ==========================================
-                    const totalMantenimientos = bitacoras.length;
-                    document.getElementById('kpi-hoy').innerText = totalMantenimientos;
+                    document.getElementById('kpi-hoy').innerText = stats.completados_hoy;
+                    document.getElementById('kpi-alertas').innerText = stats.alertas_criticas;
+                    document.getElementById('kpi-preventivos').innerText = stats.preventivos + '%';
 
                     let preventivos = 0;
                     let correctivos = 0;
 
                     bitacoras.forEach(b => {
-                        // ACTUALIZADO: b.tipo_mantenimiento
-                        if(b.tipo_mantenimiento === 'Preventivo') preventivos++;
-                        if(b.tipo_mantenimiento === 'Correctivo') correctivos++;
+                        const tipoMantenimiento = (b.tipo_mantenimiento || '').toLowerCase();
+                        if(tipoMantenimiento === 'preventivo') preventivos++;
+                        if(tipoMantenimiento === 'correctivo') correctivos++;
                     });
-
-                    // Mostramos los correctivos como alertas críticas
-                    document.getElementById('kpi-alertas').innerText = correctivos;
-
-                    // Calculamos el porcentaje de preventivos
-                    let porcentajePrev = 0;
-                    if(totalMantenimientos > 0) {
-                        porcentajePrev = Math.round((preventivos / totalMantenimientos) * 100);
-                    }
-                    document.getElementById('kpi-preventivos').innerText = porcentajePrev + '%';
                     // ==========================================
                     // LÓGICA PARA LA GRÁFICA DE DONA
                     // ==========================================
@@ -433,7 +428,7 @@
                             <td class="align-middle"><i class="fas fa-hdd text-secondary me-2"></i> ${bitacora.nombre_equipo}</td>
                             <td class="align-middle text-primary"><i class="far fa-user me-2"></i> ${bitacora.nombre_tecnico}</td>
                             <td class="align-middle">
-                                <span class="badge rounded-pill ${bitacora.tipo_mantenimiento === 'Preventivo' ? 'bg-success' : 'bg-danger'}" style="padding: 8px 12px; font-weight: 500; letter-spacing: 0.5px;">
+                                <span class="badge rounded-pill ${(bitacora.tipo_mantenimiento || '').toLowerCase() === 'preventivo' ? 'bg-success' : 'bg-danger'}" style="padding: 8px 12px; font-weight: 500; letter-spacing: 0.5px;">
                                     ${bitacora.tipo_mantenimiento}
                                 </span>
                             </td>
