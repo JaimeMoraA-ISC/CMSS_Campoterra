@@ -63,25 +63,76 @@
                 <div class="card-body">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label text-muted small fw-bold">Fecha Inicio</label>
-                            <input type="date" id="filtroInicio" class="form-control">
+                            <label for="modoFiltro" class="form-label text-muted small fw-bold">Filtrar por</label>
+                            <select id="modoFiltro" class="form-select">
+                                <option value="todo">Todo</option>
+                                <option value="anio">Año</option>
+                                <option value="mes">Mes</option>
+                                <option value="semana">Semana</option>
+                            </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label text-muted small fw-bold">Fecha Fin</label>
-                            <input type="date" id="filtroFin" class="form-control">
+                            <label for="filtroAnio" class="form-label text-muted small fw-bold">Año</label>
+                            <select id="filtroAnio" class="form-select" disabled>
+                                <option value="">Selecciona un año</option>
+                            </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label text-muted small fw-bold">Tipo de Trabajo</label>
+                        <div class="col-md-2">
+                            <label for="filtroMes" class="form-label text-muted small fw-bold">Mes</label>
+                            <select id="filtroMes" class="form-select" disabled>
+                                <option value="">Selecciona un mes</option>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filtroSemana" class="form-label text-muted small fw-bold">Semana</label>
+                            <select id="filtroSemana" class="form-select" disabled>
+                                <option value="">Selecciona una semana</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filtroTipo" class="form-label text-muted small fw-bold">Tipo de Trabajo</label>
                             <select id="filtroTipo" class="form-select">
                                 <option value="Todos">Todos</option>
                                 <option value="Preventivo">Preventivo</option>
                                 <option value="Correctivo">Correctivo</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex gap-2">
-                            <button class="btn btn-primary w-100" onclick="aplicarFiltros()"><i class="fas fa-filter me-2"></i> Filtrar</button>
-                            <button class="btn btn-success w-100" onclick="descargarExcel()"><i class="fas fa-file-excel me-2"></i> Excel</button>
+                    </div>
+                    <div class="row g-3 align-items-end mt-1">
+                        <div class="col-md-6">
+                            <label for="buscadorReportes" class="form-label text-muted small fw-bold">Buscar</label>
+                            <input type="search" id="buscadorReportes" class="form-control" placeholder="Folio, máquina, técnico o descripción...">
                         </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" id="aplicarFiltros" type="button">
+                                <i class="fas fa-filter me-2"></i> Filtrar
+                            </button>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button class="btn btn-success w-100" id="descargarExcel" type="button">
+                                <i class="fas fa-file-excel me-2"></i> Descargar Excel
+                            </button>
+                            <button class="btn btn-danger w-100" id="descargarPdf" type="button">
+                                <i class="fas fa-file-pdf me-2"></i> Descargar PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-muted small">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        <span id="rangoFiltro">Mostrando todos los registros</span>
+                        <span class="ms-2" id="contadorReportes"></span>
                     </div>
                 </div>
             </div>
@@ -116,19 +167,118 @@
     <script src="auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
     <script>
         let bitacorasGlobal = []; // Guardamos los datos aquí para filtrarlos sin consultar la BD a cada rato
+        let bitacorasFiltradas = [];
+        const meses = [
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+        ];
+
+        function obtenerFecha(bitacora) {
+            if (!bitacora.fecha_registro) return null;
+            const fecha = new Date(bitacora.fecha_registro);
+            return Number.isNaN(fecha.getTime()) ? null : fecha;
+        }
+
+        function inicioSemanaUno(anio) {
+            const primeroDeEnero = new Date(anio, 0, 1);
+            primeroDeEnero.setHours(0, 0, 0, 0);
+            primeroDeEnero.setDate(primeroDeEnero.getDate() - primeroDeEnero.getDay());
+            return primeroDeEnero;
+        }
+
+        function obtenerNumeroSemana(fecha) {
+            const inicio = inicioSemanaUno(fecha.getFullYear());
+            const dias = Math.floor((fecha - inicio) / 86400000);
+            return Math.floor(dias / 7) + 1;
+        }
+
+        function obtenerRangoSemana(anio, semana) {
+            const desde = inicioSemanaUno(anio);
+            desde.setDate(desde.getDate() + ((semana - 1) * 7));
+            const hasta = new Date(desde);
+            hasta.setDate(hasta.getDate() + 6);
+            return { desde, hasta };
+        }
+
+        function formatearFecha(fecha) {
+            return fecha.toLocaleDateString('es-MX', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        }
+
+        function cargarOpcionesAnio() {
+            const anios = [...new Set(bitacorasGlobal
+                .map(obtenerFecha)
+                .filter(Boolean)
+                .map(fecha => fecha.getFullYear()))]
+                .sort((a, b) => b - a);
+            const selector = document.getElementById('filtroAnio');
+            selector.innerHTML = '<option value="">Selecciona un año</option>';
+            anios.forEach(anio => {
+                selector.insertAdjacentHTML('beforeend', `<option value="${anio}">${anio}</option>`);
+            });
+        }
+
+        function cargarOpcionesSemana() {
+            const anio = Number(document.getElementById('filtroAnio').value);
+            const selector = document.getElementById('filtroSemana');
+            selector.innerHTML = '<option value="">Selecciona una semana</option>';
+            if (!anio) return;
+
+            const semanas = obtenerNumeroSemana(new Date(anio, 11, 31));
+            for (let semana = 1; semana <= semanas; semana += 1) {
+                const rango = obtenerRangoSemana(anio, semana);
+                selector.insertAdjacentHTML(
+                    'beforeend',
+                    `<option value="${semana}">Semana ${semana} (${formatearFecha(rango.desde)} - ${formatearFecha(rango.hasta)})</option>`
+                );
+            }
+        }
+
+        function obtenerCriterioFiltro() {
+            const modo = document.getElementById('modoFiltro').value;
+            const anio = Number(document.getElementById('filtroAnio').value);
+            const mes = Number(document.getElementById('filtroMes').value);
+            const semana = Number(document.getElementById('filtroSemana').value);
+            if (modo !== 'todo' && !anio) return { modo, incompleto: true };
+            if (modo === 'mes' && !mes) return { modo, incompleto: true };
+            if (modo === 'semana' && !semana) return { modo, incompleto: true };
+            return { modo, anio, mes, semana, incompleto: false };
+        }
+
+        function actualizarRango(criterio, cantidad) {
+            let texto = 'Mostrando todos los registros';
+            if (criterio.incompleto) {
+                texto = 'Selecciona los valores del filtro para mostrar un periodo';
+            } else if (criterio.modo === 'anio') {
+                texto = `Año ${criterio.anio}`;
+            } else if (criterio.modo === 'mes') {
+                texto = `${meses[criterio.mes - 1]} de ${criterio.anio}`;
+            } else if (criterio.modo === 'semana') {
+                const rango = obtenerRangoSemana(criterio.anio, criterio.semana);
+                texto = `Semana ${criterio.semana}: ${formatearFecha(rango.desde)} - ${formatearFecha(rango.hasta)}`;
+            }
+            document.getElementById('rangoFiltro').textContent = texto;
+            document.getElementById('contadorReportes').textContent = `(${cantidad} registro${cantidad === 1 ? '' : 's'})`;
+        }
 
         async function cargarDatos() {
             try {
                 const respuesta = await authenticatedFetch('http://localhost:8000/api/bitacoras/');
                 if (respuesta.ok) {
                     bitacorasGlobal = await respuesta.json();
-                    renderizarTabla(bitacorasGlobal);
+                    cargarOpcionesAnio();
+                    aplicarFiltros();
                 }
             } catch (error) {
                 console.error("Error al cargar datos:", error);
+                document.querySelector('#tabla-reporte tbody').innerHTML =
+                    '<tr><td colspan="6" class="text-center py-4 text-muted">Esperando datos de la API...</td></tr>';
             }
         }
 
@@ -161,43 +311,122 @@
         }
 
         function aplicarFiltros() {
-            const fInicio = document.getElementById('filtroInicio').value;
-            const fFin = document.getElementById('filtroFin').value;
+            const criterio = obtenerCriterioFiltro();
             const fTipo = document.getElementById('filtroTipo').value;
+            const texto = document.getElementById('buscadorReportes').value.trim().toLowerCase();
 
-            let filtrados = bitacorasGlobal;
-
-            // Filtrar por Tipo
+            let filtrados = criterio.incompleto ? [] : bitacorasGlobal.filter(b => {
+                const fecha = obtenerFecha(b);
+                if (criterio.modo === 'todo') return true;
+                if (!fecha || fecha.getFullYear() !== criterio.anio) return false;
+                if (criterio.modo === 'mes') return fecha.getMonth() + 1 === criterio.mes;
+                if (criterio.modo === 'semana') return obtenerNumeroSemana(fecha) === criterio.semana;
+                return true;
+            });
             if (fTipo !== 'Todos') {
                 filtrados = filtrados.filter(b => b.tipo_mantenimiento === fTipo);
             }
-
-            // Filtrar por Fechas
-            if (fInicio) {
-                const fechaInicio = new Date(fInicio);
-                fechaInicio.setHours(0,0,0,0);
-                filtrados = filtrados.filter(b => b.fecha_registro && new Date(b.fecha_registro) >= fechaInicio);
+            if (texto) {
+                filtrados = filtrados.filter(b => [
+                    b.id_bitacora, b.nombre_equipo, b.nombre_tecnico,
+                    b.tipo_mantenimiento, b.descripcion, b.detalles_repuestos
+                ].some(valor => String(valor || '').toLowerCase().includes(texto)));
             }
-            if (fFin) {
-                const fechaFin = new Date(fFin);
-                fechaFin.setHours(23,59,59,999);
-                filtrados = filtrados.filter(b => b.fecha_registro && new Date(b.fecha_registro) <= fechaFin);
-            }
-
+            bitacorasFiltradas = filtrados;
+            actualizarRango(criterio, filtrados.length);
             renderizarTabla(filtrados);
         }
 
         function descargarExcel() {
-            const tabla = document.getElementById('tabla-reporte');
-            const libroExcel = XLSX.utils.table_to_book(tabla, {sheet: "Reportes Filtrados"});
-            
-            // Genera el nombre del archivo con la fecha de hoy
-            const fechaHoy = new Date().toLocaleDateString('es-MX').replace(/\//g, '-');
-            XLSX.writeFile(libroExcel, `Reporte_Campoterra_${fechaHoy}.xlsx`);
+            if (!bitacorasFiltradas.length) {
+                alert('No hay registros filtrados para exportar.');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                alert('No se pudo cargar la librería de Excel. Verifica tu conexión e inténtalo de nuevo.');
+                return;
+            }
+            const datos = bitacorasFiltradas.map(b => ({
+                Folio: b.id_bitacora,
+                Fecha: b.fecha_registro ? new Date(b.fecha_registro).toLocaleString('es-MX') : 'Sin fecha',
+                Máquina: b.nombre_equipo || '',
+                Técnico: b.nombre_tecnico || '',
+                'Tipo de mantenimiento': b.tipo_mantenimiento || '',
+                Descripción: b.descripcion || '',
+                'Repuestos utilizados': b.detalles_repuestos || ''
+            }));
+            const libroExcel = XLSX.utils.book_new();
+            const hoja = XLSX.utils.json_to_sheet(datos);
+            XLSX.utils.book_append_sheet(libroExcel, hoja, 'Reportes filtrados');
+            XLSX.writeFile(libroExcel, `Reporte_Campoterra_${obtenerNombrePeriodo()}.xlsx`);
         }
 
-        // Cargar todo al inicio
-        document.addEventListener('DOMContentLoaded', cargarDatos);
+        function obtenerNombrePeriodo() {
+            const criterio = obtenerCriterioFiltro();
+            if (criterio.incompleto || criterio.modo === 'todo') return 'Todo';
+            if (criterio.modo === 'anio') return `${criterio.anio}`;
+            if (criterio.modo === 'mes') return `${criterio.anio}-${String(criterio.mes).padStart(2, '0')}`;
+            return `${criterio.anio}-Semana-${String(criterio.semana).padStart(2, '0')}`;
+        }
+
+        function descargarPdf() {
+            if (!bitacorasFiltradas.length) {
+                alert('No hay registros filtrados para exportar.');
+                return;
+            }
+            if (!window.jspdf
+                || typeof window.jspdf.jsPDF !== 'function'
+                || typeof window.jspdf.jsPDF.prototype.autoTable !== 'function') {
+                alert('No se pudo cargar la librería de PDF. Verifica tu conexión e inténtalo de nuevo.');
+                return;
+            }
+            const documento = new window.jspdf.jsPDF({ orientation: 'landscape' });
+            documento.text(`Reporte Campoterra - ${document.getElementById('rangoFiltro').textContent}`, 14, 15);
+            documento.autoTable({
+                startY: 22,
+                head: [['Folio', 'Fecha', 'Máquina', 'Técnico', 'Tipo', 'Descripción']],
+                body: bitacorasFiltradas.map(b => [
+                    b.id_bitacora || '',
+                    b.fecha_registro ? new Date(b.fecha_registro).toLocaleString('es-MX') : 'Sin fecha',
+                    b.nombre_equipo || '',
+                    b.nombre_tecnico || '',
+                    b.tipo_mantenimiento || '',
+                    b.descripcion || ''
+                ]),
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [11, 21, 40] }
+            });
+            documento.save(`Reporte_Campoterra_${obtenerNombrePeriodo()}.pdf`);
+        }
+
+        function actualizarControles() {
+            const modo = document.getElementById('modoFiltro').value;
+            const anioActivo = ['anio', 'mes', 'semana'].includes(modo);
+            document.getElementById('filtroAnio').disabled = !anioActivo;
+            document.getElementById('filtroMes').disabled = modo !== 'mes';
+            document.getElementById('filtroSemana').disabled = modo !== 'semana';
+            if (modo !== 'mes') document.getElementById('filtroMes').value = '';
+            if (modo !== 'semana') document.getElementById('filtroSemana').value = '';
+            if (!anioActivo) document.getElementById('filtroAnio').value = '';
+            if (anioActivo) cargarOpcionesSemana();
+            aplicarFiltros();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('modoFiltro').addEventListener('change', actualizarControles);
+            document.getElementById('filtroAnio').addEventListener('change', () => {
+                cargarOpcionesSemana();
+                aplicarFiltros();
+            });
+            document.getElementById('filtroMes').addEventListener('change', aplicarFiltros);
+            document.getElementById('filtroSemana').addEventListener('change', aplicarFiltros);
+            document.getElementById('filtroTipo').addEventListener('change', aplicarFiltros);
+            document.getElementById('buscadorReportes').addEventListener('input', aplicarFiltros);
+            document.getElementById('aplicarFiltros').addEventListener('click', aplicarFiltros);
+            document.getElementById('descargarExcel').addEventListener('click', descargarExcel);
+            document.getElementById('descargarPdf').addEventListener('click', descargarPdf);
+            cargarDatos();
+        });
     </script>
 </body>
 </html>
