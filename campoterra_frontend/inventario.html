@@ -17,6 +17,7 @@
         .topbar { background: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .user-profile { display: flex; align-items: center; gap: 15px; }
         .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        .sync-status { min-width: 220px; }
         @media (max-width: 800px) { .sidebar { width: 210px; } .main-content { margin-left: 210px; } .topbar { padding: 15px; } }
     </style>
 </head>
@@ -45,6 +46,13 @@
                 <small class="text-muted">Existencias actuales y movimientos de almacén</small>
             </div>
             <div class="user-profile">
+                <div class="sync-status text-end">
+                    <div id="inventario-sync-status" class="small text-muted" role="status">Sincronización pendiente</div>
+                    <small id="inventario-last-update" class="text-muted">Última actualización: pendiente</small>
+                </div>
+                <button id="btnActualizarInventario" class="btn btn-outline-primary btn-sm" type="button">
+                    <i class="fas fa-sync-alt me-1"></i> Actualizar ahora
+                </button>
                 <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
                 <div><strong>Jorge Ríos</strong><br><small class="text-muted">Jefe de Mantenimiento</small></div>
             </div>
@@ -85,6 +93,9 @@
     <script src="auth.js"></script>
     <script>
         const API = 'http://localhost:8000';
+        const INVENTARIO_REFRESH_INTERVAL_MS = 60000;
+        let inventarioRefreshInterval = null;
+        let inventarioRefreshInFlight = false;
         const mensaje = document.getElementById('mensaje');
         function mostrarMensaje(texto, tipo) {
             mensaje.textContent = texto;
@@ -103,6 +114,7 @@
                 tabla.innerHTML += `<tr><td>${pieza.nombre}</td><td>${pieza.codigo}</td><td>${pieza.categoria}</td><td><span class="badge ${color}">${pieza.stock}</span></td></tr>`;
                 selector.innerHTML += `<option value="${pieza.id_pieza}">${pieza.nombre} (${pieza.stock})</option>`;
             });
+            return true;
         }
         async function cargarMovimientos() {
             const respuesta = await authenticatedFetch(`${API}/api/inventario/movimientos`);
@@ -114,6 +126,35 @@
                 const color = movimiento.tipo === 'Entrada' ? 'bg-success' : 'bg-danger';
                 tabla.innerHTML += `<tr><td>${new Date(movimiento.fecha_movimiento).toLocaleString('es-MX')}</td><td>${movimiento.nombre_pieza}</td><td><span class="badge ${color}">${movimiento.tipo}</span></td><td>${movimiento.cantidad}</td><td>${movimiento.motivo}</td></tr>`;
             });
+            return true;
+        }
+        function actualizarEstadoInventario(mensajeEstado, clase = 'text-muted') {
+            const estado = document.getElementById('inventario-sync-status');
+            estado.className = `small ${clase}`;
+            estado.textContent = mensajeEstado;
+        }
+        function registrarActualizacionInventario() {
+            document.getElementById('inventario-last-update').textContent =
+                `Última actualización: ${new Date().toLocaleTimeString('es-MX')}`;
+        }
+        async function actualizarInventario() {
+            if (inventarioRefreshInFlight) return;
+            inventarioRefreshInFlight = true;
+            actualizarEstadoInventario('Sincronizando...', 'text-primary');
+            document.getElementById('btnActualizarInventario').disabled = true;
+            try {
+                const resultados = await Promise.allSettled([cargarInventario(), cargarMovimientos()]);
+                if (resultados.every(resultado => resultado.status === 'fulfilled')) {
+                    registrarActualizacionInventario();
+                    actualizarEstadoInventario('Sincronizado', 'text-success');
+                } else {
+                    console.error('No se pudo actualizar todo el inventario.', resultados);
+                    actualizarEstadoInventario('No se pudo actualizar todo; se conservan los datos disponibles.', 'text-warning');
+                }
+            } finally {
+                inventarioRefreshInFlight = false;
+                document.getElementById('btnActualizarInventario').disabled = false;
+            }
         }
         document.getElementById('formEntradaPieza').addEventListener('submit', async event => {
             event.preventDefault();
@@ -133,7 +174,14 @@
                 mostrarMensaje('Entrada registrada correctamente.', 'success');
             } catch (error) { mostrarMensaje(error.message, 'danger'); }
         });
-        Promise.all([cargarInventario(), cargarMovimientos()]).catch(error => mostrarMensaje(error.message, 'danger'));
+        document.getElementById('btnActualizarInventario').addEventListener('click', actualizarInventario);
+        actualizarInventario().catch(error => {
+            console.error('Error al actualizar inventario:', error);
+            actualizarEstadoInventario('Error de sincronización.', 'text-danger');
+        });
+        if (!inventarioRefreshInterval) {
+            inventarioRefreshInterval = window.setInterval(actualizarInventario, INVENTARIO_REFRESH_INTERVAL_MS);
+        }
     </script>
 </body>
 </html>

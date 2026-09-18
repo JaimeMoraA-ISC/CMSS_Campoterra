@@ -155,6 +155,9 @@
             border-radius: 50%;
             object-fit: cover;
         }
+        .sync-status {
+            min-width: 220px;
+        }
     </style>
 </head>
 <body>
@@ -192,6 +195,13 @@
             
             
             <div class="user-profile">
+                <div class="sync-status text-end">
+                    <div id="dashboard-sync-status" class="small text-muted" role="status">Sincronización pendiente</div>
+                    <small id="dashboard-last-update" class="text-muted">Última actualización: pendiente</small>
+                </div>
+                <button id="btnActualizarDashboard" class="btn btn-outline-primary btn-sm" type="button">
+                    <i class="fas fa-sync-alt me-1"></i> Actualizar ahora
+                </button>
                 <div class="notification-wrapper">
                     <button id="notification-button" class="notification-button" type="button"
                         aria-label="Ver notificaciones" aria-expanded="false">
@@ -385,6 +395,9 @@
   <script src="auth.js"></script>
     <script>
       const NOTIFICATIONS_URL = 'http://localhost:8000/api/notificaciones';
+      const DASHBOARD_REFRESH_INTERVAL_MS = 60000;
+      let dashboardRefreshInterval = null;
+      let dashboardRefreshInFlight = false;
 
       function mostrarNotificaciones(notificaciones) {
           const lista = document.getElementById('notification-list');
@@ -577,7 +590,7 @@
 
                     if (!semanaActual.bitacoras.length) {
                         cuerpoTabla.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay actividades registradas en la semana actual.</td></tr>';
-                        return;
+                        return true;
                     }
 
                     semanaActual.bitacoras
@@ -606,14 +619,12 @@
                     if (!cuerpoTabla.children.length) {
                         cuerpoTabla.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay actividades con fecha registrada en la semana actual.</td></tr>';
                     }
+                    return true;
             } catch (error) {
                 console.error("Error al cargar los datos:", error);
-                document.getElementById('actividades-periodo').innerText = 'No se pudo cargar el periodo actual.';
-                document.querySelector('#tabla-bitacoras tbody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se pudieron cargar las actividades de la semana actual.</td></tr>';
+                return false;
             }
         }
-
-        document.addEventListener('DOMContentLoaded', cargarBitacoras);
 
         function obtenerSemanaActual() {
             const ahora = new Date();
@@ -637,26 +648,62 @@
             document.getElementById('semana-total').innerText = datos.total;
             document.getElementById('semana-preventivos').innerText = datos.preventivos;
             document.getElementById('semana-correctivos').innerText = datos.correctivos;
+            return true;
         }
 
         function formatearFechaPeriodo(fecha) {
             return new Date(`${fecha}T12:00:00`).toLocaleDateString('es-MX');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function actualizarEstadoDashboard(mensaje, clase = 'text-muted') {
+            const estado = document.getElementById('dashboard-sync-status');
+            estado.className = `small ${clase}`;
+            estado.textContent = mensaje;
+        }
+
+        function registrarActualizacionDashboard() {
+            document.getElementById('dashboard-last-update').textContent =
+                `Última actualización: ${new Date().toLocaleTimeString('es-MX')}`;
+        }
+
+        async function actualizarDashboard() {
+            if (dashboardRefreshInFlight) return;
+            dashboardRefreshInFlight = true;
+            actualizarEstadoDashboard('Sincronizando...', 'text-primary');
+            document.getElementById('btnActualizarDashboard').disabled = true;
+            try {
+                const resultados = await Promise.all([
+                    cargarBitacoras(),
+                    cargarResumenSemanal().catch(error => {
+                        console.error('Error al cargar el resumen semanal:', error);
+                        return false;
+                    })
+                ]);
+                if (resultados.every(Boolean)) {
+                    registrarActualizacionDashboard();
+                    actualizarEstadoDashboard('Sincronizado', 'text-success');
+                } else {
+                    actualizarEstadoDashboard('No se pudo actualizar todo; se conservan los datos disponibles.', 'text-warning');
+                }
+            } finally {
+                dashboardRefreshInFlight = false;
+                document.getElementById('btnActualizarDashboard').disabled = false;
+            }
+        }
+
+        function inicializarDashboard() {
             const semanaActual = obtenerSemanaActual();
             document.getElementById('selectorAnio').value = semanaActual.anio;
             document.getElementById('selectorSemana').value = semanaActual.semana;
-            cargarResumenSemanal().catch(error => {
-                document.getElementById('semana-periodo').innerText = error.message;
-            });
-        });
+            document.getElementById('btnCargarSemana').addEventListener('click', actualizarDashboard);
+            document.getElementById('btnActualizarDashboard').addEventListener('click', actualizarDashboard);
+            actualizarDashboard();
+            if (!dashboardRefreshInterval) {
+                dashboardRefreshInterval = window.setInterval(actualizarDashboard, DASHBOARD_REFRESH_INTERVAL_MS);
+            }
+        }
 
-        document.getElementById('btnCargarSemana').addEventListener('click', () => {
-            cargarResumenSemanal().catch(error => {
-                document.getElementById('semana-periodo').innerText = error.message;
-            });
-        });
+        document.addEventListener('DOMContentLoaded', inicializarDashboard);
 
         // ==========================================
         // LÓGICA DEL BUSCADOR EN TIEMPO REAL
