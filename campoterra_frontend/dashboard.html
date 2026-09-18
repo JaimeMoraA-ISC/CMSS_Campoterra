@@ -273,7 +273,10 @@
         <!-- CONTENEDOR DE LA TABLA -->
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="mb-0 text-secondary"><strong>ACTIVIDADES RECIENTES</strong></h5>
+                <div>
+                    <h5 class="mb-1 text-secondary"><strong>ACTIVIDADES RECIENTES</strong></h5>
+                    <small class="text-muted" id="actividades-periodo">Semana actual: cargando periodo...</small>
+                </div>
                 <button id="btnExportar" class="btn btn-outline-success">
                     <i class="fas fa-file-excel me-2"></i> Exportar Reporte
                 </button>
@@ -307,20 +310,24 @@
     <script>
        async function cargarBitacoras() {
             try {
-                const [respuestaBitacoras, respuestaStats] = await Promise.all([
+                const [respuestaBitacoras, respuestaStats, respuestaSemanaActual] = await Promise.all([
                     authenticatedFetch('http://localhost:8000/api/bitacoras/'),
-                    authenticatedFetch('http://localhost:8000/api/dashboard/stats')
+                    authenticatedFetch('http://localhost:8000/api/dashboard/stats'),
+                    authenticatedFetch('http://localhost:8000/api/dashboard/weekly')
                 ]);
-                if (respuestaBitacoras.ok && respuestaStats.ok) {
-                    const bitacoras = await respuestaBitacoras.json();
-                    const stats = await respuestaStats.json();
+                if (!respuestaBitacoras.ok || !respuestaStats.ok || !respuestaSemanaActual.ok) {
+                    throw new Error('No se pudieron cargar los datos del dashboard.');
+                }
+                const bitacoras = await respuestaBitacoras.json();
+                const stats = await respuestaStats.json();
+                const semanaActual = await respuestaSemanaActual.json();
                     
-                    // ==========================================
-                    // LÓGICA PARA LOS INDICADORES (KPIs)
-                    // ==========================================
-                    document.getElementById('kpi-hoy').innerText = stats.completados_hoy;
-                    document.getElementById('kpi-alertas').innerText = stats.alertas_criticas;
-                    document.getElementById('kpi-preventivos').innerText = stats.preventivos + '%';
+                // ==========================================
+                // LÓGICA PARA LOS INDICADORES (KPIs)
+                // ==========================================
+                document.getElementById('kpi-hoy').innerText = stats.completados_hoy;
+                document.getElementById('kpi-alertas').innerText = stats.alertas_criticas;
+                document.getElementById('kpi-preventivos').innerText = stats.preventivos + '%';
 
                     let preventivos = 0;
                     let correctivos = 0;
@@ -414,11 +421,21 @@
                     });
                     // ==========================================
 
-                    // LÓGICA PARA LLENAR LA TABLA
+                    // La tabla del dashboard solo muestra la semana actual.
                     const cuerpoTabla = document.querySelector('#tabla-bitacoras tbody');
-                    cuerpoTabla.innerHTML = ''; 
+                    const periodo = `${formatearFechaPeriodo(semanaActual.inicio)} al ${formatearFechaPeriodo(semanaActual.fin)}`;
+                    document.getElementById('actividades-periodo').innerText =
+                        `Semana ${semanaActual.week} de ${semanaActual.year}: ${periodo}`;
+                    cuerpoTabla.innerHTML = '';
 
-                    bitacoras.forEach(bitacora => {
+                    if (!semanaActual.bitacoras.length) {
+                        cuerpoTabla.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay actividades registradas en la semana actual.</td></tr>';
+                        return;
+                    }
+
+                    semanaActual.bitacoras
+                        .filter(bitacora => bitacora.fecha_registro)
+                        .forEach(bitacora => {
                         const fila = document.createElement('tr');
                         
                         // ACTUALIZADO: Variables alineadas con FastAPI
@@ -437,10 +454,15 @@
                             <td class="align-middle">${bitacora.detalles_repuestos ? bitacora.detalles_repuestos : '<span class="text-muted">Ninguno</span>'}</td>
                         `;
                         cuerpoTabla.appendChild(fila);
-                    });
-                }
+                        });
+
+                    if (!cuerpoTabla.children.length) {
+                        cuerpoTabla.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay actividades con fecha registrada en la semana actual.</td></tr>';
+                    }
             } catch (error) {
                 console.error("Error al cargar los datos:", error);
+                document.getElementById('actividades-periodo').innerText = 'No se pudo cargar el periodo actual.';
+                document.querySelector('#tabla-bitacoras tbody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se pudieron cargar las actividades de la semana actual.</td></tr>';
             }
         }
 
@@ -464,11 +486,14 @@
             const datos = await respuesta.json();
             if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo cargar la semana');
 
-            const formatoFecha = fecha => new Date(`${fecha}T12:00:00`).toLocaleDateString('es-MX');
-            document.getElementById('semana-periodo').innerText = `Semana ${datos.week} de ${datos.year}: ${formatoFecha(datos.inicio)} al ${formatoFecha(datos.fin)}`;
+            document.getElementById('semana-periodo').innerText = `Semana ${datos.week} de ${datos.year}: ${formatearFechaPeriodo(datos.inicio)} al ${formatearFechaPeriodo(datos.fin)}`;
             document.getElementById('semana-total').innerText = datos.total;
             document.getElementById('semana-preventivos').innerText = datos.preventivos;
             document.getElementById('semana-correctivos').innerText = datos.correctivos;
+        }
+
+        function formatearFechaPeriodo(fecha) {
+            return new Date(`${fecha}T12:00:00`).toLocaleDateString('es-MX');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
