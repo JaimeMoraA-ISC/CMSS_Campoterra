@@ -374,13 +374,15 @@
                 alert('No hay registros filtrados para exportar.');
                 return;
             }
-            if (!window.jspdf
-                || typeof window.jspdf.jsPDF !== 'function'
-                || typeof window.jspdf.jsPDF.prototype.autoTable !== 'function') {
+            if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
                 alert('No se pudo cargar la librería de PDF. Verifica tu conexión e inténtalo de nuevo.');
                 return;
             }
             const documento = new window.jspdf.jsPDF({ orientation: 'landscape' });
+            if (typeof documento.autoTable !== 'function') {
+                alert('No se pudo cargar el complemento de tablas PDF. Verifica tu conexión e inténtalo de nuevo.');
+                return;
+            }
             documento.text(`Reporte Campoterra - ${document.getElementById('rangoFiltro').textContent}`, 14, 15);
             documento.autoTable({
                 startY: 22,
