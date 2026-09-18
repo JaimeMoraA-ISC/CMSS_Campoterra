@@ -87,6 +87,68 @@
             align-items: center;
             gap: 15px;
         }
+        .notification-wrapper {
+            position: relative;
+        }
+        .notification-button {
+            border: 0;
+            background: transparent;
+            color: #555;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .notification-panel {
+            position: absolute;
+            right: 0;
+            top: 42px;
+            width: 360px;
+            max-height: 420px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #e7eaf0;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            z-index: 1100;
+            display: none;
+        }
+        .notification-panel.show {
+            display: block;
+        }
+        .notification-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eef0f3;
+        }
+        .notification-item {
+            display: block;
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid #f0f1f3;
+            background: #fff;
+            padding: 12px 15px;
+            text-align: left;
+            cursor: pointer;
+        }
+        .notification-item:hover, .notification-item.unread {
+            background: #f4f8fb;
+        }
+        .notification-item-title {
+            color: #1d2939;
+            font-weight: 600;
+            font-size: .9rem;
+        }
+        .notification-item-message, .notification-item-date {
+            color: #667085;
+            font-size: .8rem;
+        }
+        .notification-empty {
+            color: #667085;
+            padding: 22px 15px;
+            text-align: center;
+            font-size: .9rem;
+        }
         .user-profile img {
             width: 40px;
             height: 40px;
@@ -130,11 +192,25 @@
             
             
             <div class="user-profile">
-                <i class="fas fa-bell" style="font-size: 1.2rem; color: #555; position: relative;">
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
-                        3
-                    </span>
-                </i>
+                <div class="notification-wrapper">
+                    <button id="notification-button" class="notification-button" type="button"
+                        aria-label="Ver notificaciones" aria-expanded="false">
+                        <i class="fas fa-bell" style="font-size: 1.2rem; position: relative;">
+                            <span id="notification-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                style="font-size: 0.6rem; display: none;">0</span>
+                        </i>
+                    </button>
+                    <div id="notification-panel" class="notification-panel" role="region"
+                        aria-label="Notificaciones">
+                        <div class="notification-panel-header">
+                            <strong>Notificaciones</strong>
+                            <button id="mark-all-notifications" class="btn btn-sm btn-link p-0" type="button">
+                                Marcar todas como leídas
+                            </button>
+                        </div>
+                        <div id="notification-list"></div>
+                    </div>
+                </div>
                 <img src="https://ui-avatars.com/api/?name=Jorge+Rios&background=0D8ABC&color=fff" alt="Perfil">
                 <div style="line-height: 1.2;">
                     <strong>Jorge Ríos</strong><br>
@@ -308,7 +384,78 @@
 
   <script src="auth.js"></script>
     <script>
-       async function cargarBitacoras() {
+      const NOTIFICATIONS_URL = 'http://localhost:8000/api/notificaciones';
+
+      function mostrarNotificaciones(notificaciones) {
+          const lista = document.getElementById('notification-list');
+          lista.innerHTML = '';
+          if (!notificaciones.length) {
+              const vacio = document.createElement('div');
+              vacio.className = 'notification-empty';
+              vacio.textContent = 'No hay notificaciones nuevas';
+              lista.appendChild(vacio);
+              return;
+          }
+          notificaciones.forEach(notificacion => {
+              const item = document.createElement('button');
+              item.type = 'button';
+              item.className = `notification-item${notificacion.leida ? '' : ' unread'}`;
+              const titulo = document.createElement('div');
+              titulo.className = 'notification-item-title';
+              titulo.textContent = notificacion.titulo;
+              const mensaje = document.createElement('div');
+              mensaje.className = 'notification-item-message';
+              mensaje.textContent = notificacion.mensaje;
+              const fecha = document.createElement('div');
+              fecha.className = 'notification-item-date mt-1';
+              fecha.textContent = `${new Date(notificacion.fecha).toLocaleString('es-MX')} · ${notificacion.leida ? 'Leída' : 'Nueva'}`;
+              item.append(titulo, mensaje, fecha);
+              item.addEventListener('click', async () => {
+                  if (!notificacion.leida) {
+                      const respuesta = await authenticatedFetch(
+                          `${NOTIFICATIONS_URL}/${notificacion.id_notificacion}/leer`,
+                          { method: 'POST' }
+                      );
+                      if (!respuesta.ok) return;
+                  }
+                  if (notificacion.enlace) window.location.href = notificacion.enlace;
+                  else await cargarNotificaciones();
+              });
+              lista.appendChild(item);
+          });
+      }
+
+      async function cargarNotificaciones() {
+          try {
+              const respuesta = await authenticatedFetch(`${NOTIFICATIONS_URL}?limite=50`);
+              if (!respuesta.ok) throw new Error('No se pudieron cargar las notificaciones.');
+              const datos = await respuesta.json();
+              const contador = document.getElementById('notification-count');
+              contador.textContent = datos.no_leidas;
+              contador.style.display = datos.no_leidas ? 'inline-block' : 'none';
+              mostrarNotificaciones(datos.notificaciones);
+          } catch (error) {
+              console.error('Error al cargar notificaciones:', error);
+          }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+          const boton = document.getElementById('notification-button');
+          const panel = document.getElementById('notification-panel');
+          boton.addEventListener('click', () => {
+              const visible = panel.classList.toggle('show');
+              boton.setAttribute('aria-expanded', visible ? 'true' : 'false');
+              if (visible) cargarNotificaciones();
+          });
+          document.getElementById('mark-all-notifications').addEventListener('click', async () => {
+              const respuesta = await authenticatedFetch(`${NOTIFICATIONS_URL}/leer-todas`, { method: 'POST' });
+              if (respuesta.ok) cargarNotificaciones();
+          });
+          cargarNotificaciones();
+          window.setInterval(cargarNotificaciones, 45000);
+      });
+
+     async function cargarBitacoras() {
             try {
                 const [respuestaBitacoras, respuestaStats, respuestaSemanaActual] = await Promise.all([
                     authenticatedFetch('http://localhost:8000/api/bitacoras/'),

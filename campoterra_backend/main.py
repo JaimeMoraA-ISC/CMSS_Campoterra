@@ -156,6 +156,20 @@ def crear_bitacora(
     db.add(nueva_bitacora)
     db.commit()
     db.refresh(nueva_bitacora) # Obtenemos el folio autoincrementable generado
+    equipo = db.query(models.Equipo).filter(models.Equipo.id_equipo == bitacora.id_equipo).first()
+    tecnico = db.query(models.Tecnico).filter(models.Tecnico.id_tecnico == bitacora.id_tecnico).first()
+    db.add(models.Notificacion(
+        tipo="nuevo_reporte",
+        titulo="Nuevo reporte registrado",
+        mensaje=(
+            f"Equipo: {equipo.nombre if equipo else bitacora.id_equipo}. "
+            f"Técnico: {tecnico.nombre if tecnico else bitacora.id_tecnico}."
+        ),
+        fecha=nueva_bitacora.fecha_registro or datetime.now(),
+        enlace="bitacoras.html",
+        referencia_id=nueva_bitacora.id_bitacora,
+    ))
+    db.commit()
     
     return {
         "mensaje": "¡Bitácora registrada con éxito!", 
@@ -474,6 +488,19 @@ def create_new_report(
             motivo=f"Reporte de mantenimiento #{nueva_bitacora.id_bitacora}",
             fecha_movimiento=datetime.now(),
         ))
+    equipo = db.query(models.Equipo).filter(models.Equipo.id_equipo == report.equipo_id).first()
+    tecnico = db.query(models.Tecnico).filter(models.Tecnico.id_tecnico == report.tecnico_id).first()
+    db.add(models.Notificacion(
+        tipo="nuevo_reporte",
+        titulo="Nuevo reporte registrado",
+        mensaje=(
+            f"Equipo: {equipo.nombre if equipo else report.equipo_id}. "
+            f"Técnico: {tecnico.nombre if tecnico else report.tecnico_id}."
+        ),
+        fecha=nueva_bitacora.fecha_registro or datetime.now(),
+        enlace="bitacoras.html",
+        referencia_id=nueva_bitacora.id_bitacora,
+    ))
     db.commit()
     db.refresh(nueva_bitacora)
     
@@ -494,6 +521,7 @@ class AlertaUrgenteRequest(BaseModel):
 async def create_urgent_alert(
     alerta: AlertaUrgenteRequest,
     user: dict = Depends(require_mobile_user),
+    db: Session = Depends(get_db),
 ):
     print("\n" + "🚨"*20)
     print("🚨 ALERTA DE FALLA URGENTE 🚨")
@@ -503,11 +531,82 @@ async def create_urgent_alert(
     print(f"⚙️  Equipo: {alerta.equipo}")
     print(f"📝 Descripción: {alerta.descripcion}")
     print("🚨"*20 + "\n")
+    db.add(models.Notificacion(
+        tipo="alerta_urgente",
+        titulo="Alerta urgente de mantenimiento",
+        mensaje=f"Equipo: {alerta.equipo}. {alerta.descripcion}",
+        fecha=datetime.now(),
+        enlace="dashboard.html",
+    ))
+    db.commit()
     
     return {
         "status": "success",
         "message": f"Alerta enviada a mantenimiento con prioridad {alerta.prioridad}"
     }
+
+
+@app.get(
+    "/api/notificaciones",
+    response_model=dict,
+    tags=["Dashboard Web"],
+)
+def obtener_notificaciones(
+    solo_no_leidas: bool = False,
+    limite: int = 50,
+    user: dict = Depends(require_dashboard_user),
+    db: Session = Depends(get_db),
+):
+    limite = max(1, min(limite, 100))
+    query = db.query(models.Notificacion)
+    if solo_no_leidas:
+        query = query.filter(models.Notificacion.leida.is_(False))
+    notificaciones = (
+        query.order_by(models.Notificacion.fecha.desc())
+        .limit(limite)
+        .all()
+    )
+    no_leidas = (
+        db.query(models.Notificacion)
+        .filter(models.Notificacion.leida.is_(False))
+        .count()
+    )
+    return {
+        "notificaciones": notificaciones,
+        "no_leidas": no_leidas,
+    }
+
+
+@app.post("/api/notificaciones/leer-todas", tags=["Dashboard Web"])
+def marcar_todas_notificaciones_leidas(
+    user: dict = Depends(require_dashboard_user),
+    db: Session = Depends(get_db),
+):
+    db.query(models.Notificacion).filter(
+        models.Notificacion.leida.is_(False)
+    ).update({models.Notificacion.leida: True}, synchronize_session=False)
+    db.commit()
+    return {"mensaje": "Notificaciones marcadas como leídas"}
+
+
+@app.post("/api/notificaciones/{notificacion_id}/leer", tags=["Dashboard Web"])
+def marcar_notificacion_leida(
+    notificacion_id: int,
+    user: dict = Depends(require_dashboard_user),
+    db: Session = Depends(get_db),
+):
+    notificacion = (
+        db.query(models.Notificacion)
+        .filter(models.Notificacion.id_notificacion == notificacion_id)
+        .first()
+    )
+    if not notificacion:
+        raise HTTPException(status_code=404, detail="Notificación no encontrada")
+    if not notificacion.leida:
+        notificacion.leida = True
+        db.commit()
+    return {"mensaje": "Notificación marcada como leída"}
+
 
 @app.get("/api/dashboard/stats", tags=["App Móvil Técnicos"])
 def get_dashboard_stats(user: dict = Depends(require_dashboard_user), db: Session = Depends(get_db)):
