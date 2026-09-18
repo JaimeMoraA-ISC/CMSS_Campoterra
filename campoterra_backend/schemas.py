@@ -80,3 +80,17 @@ class MovimientoPiezaResponse(BaseModel):
     cantidad: int
     motivo: str
     fecha_movimiento: datetime
+
+
+class NotificacionResponse(BaseModel):
+    id_notificacion: int
+    tipo: str
+    titulo: str
+    mensaje: str
+    fecha: datetime
+    leida: bool
+    enlace: Optional[str] = None
+    referencia_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True

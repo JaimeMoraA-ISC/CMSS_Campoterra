@@ -87,3 +87,16 @@ class MovimientoPieza(Base):
     fecha_movimiento = Column(TIMESTAMP, nullable=False)
 
     pieza = relationship("Pieza")
+
+
+class Notificacion(Base):
+    __tablename__ = "notificaciones"
+
+    id_notificacion = Column(Integer, primary_key=True, index=True)
+    tipo = Column(String(50), nullable=False, default="informativa")
+    titulo = Column(String(150), nullable=False)
+    mensaje = Column(Text, nullable=False)
+    fecha = Column(TIMESTAMP, nullable=False)
+    leida = Column(Boolean, nullable=False, default=False, index=True)
+    enlace = Column(String(255), nullable=True)
+    referencia_id = Column(Integer, nullable=True)
