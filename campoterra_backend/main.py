@@ -7,7 +7,13 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date, datetime, timedelta
-from auth import create_access_token, hash_password, require_dashboard_user, verify_password
+from auth import (
+    create_access_token,
+    hash_password,
+    require_dashboard_user,
+    require_mobile_user,
+    verify_password,
+)
 
 app = FastAPI(title="API Campoterra CMMS")
 
@@ -34,19 +40,53 @@ def obtener_equipos(user: dict = Depends(require_dashboard_user), db: Session = 
     return equipos
 
 class ShiftStartRequest(BaseModel):
-    tecnico: str
-    turno: str
+    tecnico_id: Optional[int] = None
+    turno_id: Optional[int] = None
+    tecnico: Optional[str] = None
+    turno: Optional[str] = None
 
 @app.post("/api/shift/start")
-async def start_shift(data: ShiftStartRequest):
-    # Aquí es donde en el futuro guardarás esto en tu base de datos (MySQL/MongoDB)
-    print(f"✅ RECIBIDO: Iniciando jornada para {data.tecnico} en el {data.turno}")
-    
-    # Le respondemos a la app móvil que todo salió bien
+async def start_shift(data: ShiftStartRequest, db: Session = Depends(get_db)):
+    tecnico_db = None
+    if data.tecnico_id is not None:
+        tecnico_db = (
+            db.query(models.Tecnico)
+            .filter(
+                models.Tecnico.id_tecnico == data.tecnico_id,
+                models.Tecnico.estado == "Activo",
+            )
+            .first()
+        )
+    elif data.tecnico:
+        tecnico_db = (
+            db.query(models.Tecnico)
+            .filter(
+                models.Tecnico.nombre == data.tecnico,
+                models.Tecnico.estado == "Activo",
+            )
+            .first()
+        )
+
+    turno_db = None
+    if data.turno_id is not None:
+        turno_db = db.query(models.Turno).filter(models.Turno.id_turno == data.turno_id).first()
+    elif data.turno:
+        turno_db = db.query(models.Turno).filter(models.Turno.descripcion == data.turno).first()
+
+    if not tecnico_db or not turno_db:
+        raise HTTPException(
+            status_code=401,
+            detail="El técnico o turno seleccionado no es válido o ya no está activo.",
+        )
+
     return {
         "status": "success",
         "message": "Jornada registrada correctamente",
-        "tecnico_activo": data.tecnico
+        "tecnico_activo": tecnico_db.nombre,
+        "tecnico_id": tecnico_db.id_tecnico,
+        "turno_id": turno_db.id_turno,
+        "access_token": create_access_token(str(tecnico_db.id_tecnico), "Tecnico"),
+        "token_type": "bearer",
     }
 
 # 3. Ruta GET para enviar las opciones de técnicos y turnos disponibles
@@ -88,10 +128,19 @@ class BitacoraCreate(BaseModel):
     detalles_repuestos: Optional[str] = None  # Puede ir vacío si no usaron piezas
 
 @app.post("/api/bitacoras/", tags=["App Móvil Técnicos"])
-def crear_bitacora(bitacora: BitacoraCreate, db: Session = Depends(get_db)):
+def crear_bitacora(
+    bitacora: BitacoraCreate,
+    user: dict = Depends(require_mobile_user),
+    db: Session = Depends(get_db),
+):
     """
     Recibe la información de la tablet y la inserta en MySQL.
     """
+    if user["sub"] != str(bitacora.id_tecnico):
+        raise HTTPException(
+            status_code=403,
+            detail="El técnico del reporte no coincide con la sesión móvil activa.",
+        )
     # Enlazamos los datos recibidos con el modelo de SQLAlchemy
     nueva_bitacora = models.Bitacora(
         id_equipo=bitacora.id_equipo,
@@ -233,7 +282,11 @@ def obtener_todos_los_tecnicos(user: dict = Depends(require_dashboard_user), db:
     return lista_tecnicos
 
 @app.post("/api/equipos/", tags=["Catálogo de Maquinaria"])
-def registrar_equipo(equipo: schemas.EquipoCreate, db: Session = Depends(get_db)):
+def registrar_equipo(
+    equipo: schemas.EquipoCreate,
+    user: dict = Depends(require_dashboard_user),
+    db: Session = Depends(get_db),
+):
     # Desempaquetamos los datos validados por Pydantic hacia el modelo de la BD
     nuevo_equipo = models.Equipo(
         codigo_interno=equipo.codigo_interno,
@@ -348,7 +401,16 @@ class NuevoReporteRequest(BaseModel):
 
 # Ruta para recibir y guardar el reporte
 @app.post("/api/reports/new", tags=["App Móvil Técnicos"])
-def create_new_report(report: NuevoReporteRequest, db: Session = Depends(get_db)):
+def create_new_report(
+    report: NuevoReporteRequest,
+    user: dict = Depends(require_mobile_user),
+    db: Session = Depends(get_db),
+):
+    if user["sub"] != str(report.tecnico_id):
+        raise HTTPException(
+            status_code=403,
+            detail="El técnico del reporte no coincide con la sesión móvil activa.",
+        )
     cantidades_por_pieza = {}
     for pieza in report.piezas:
         if pieza.qty <= 0:
@@ -429,7 +491,10 @@ class AlertaUrgenteRequest(BaseModel):
 
 # Ruta para recibir la alerta
 @app.post("/api/reports/urgent")
-async def create_urgent_alert(alerta: AlertaUrgenteRequest):
+async def create_urgent_alert(
+    alerta: AlertaUrgenteRequest,
+    user: dict = Depends(require_mobile_user),
+):
     print("\n" + "🚨"*20)
     print("🚨 ALERTA DE FALLA URGENTE 🚨")
     print("🚨"*20)

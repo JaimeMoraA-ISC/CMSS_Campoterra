@@ -11,5 +11,10 @@ mensaje explícito si falta la clave. En desarrollo se genera una clave temporal
 para no incluir secretos en el repositorio.
 
 Las rutas del Dashboard requieren `Authorization: Bearer <access_token>`.
-Las rutas usadas por la aplicación móvil no requieren este token para mantener
-compatibilidad.
+`GET /api/shift/options` permanece público porque sólo entrega las opciones
+necesarias para mostrar el selector de inicio de jornada. `POST /api/shift/start`
+valida que el técnico esté activo y el turno exista, y devuelve un token de
+sesión temporal para la app móvil. La app debe enviarlo como
+`Authorization: Bearer <token>` en estadísticas, catálogos, inventario y
+reportes. Las rutas móviles de lectura/escritura protegidas ya no aceptan
+peticiones sin ese token.
