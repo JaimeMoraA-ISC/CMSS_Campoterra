@@ -110,3 +110,16 @@ def require_dashboard_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return _decode_token(credentials.credentials)
+
+
+def require_mobile_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+) -> dict:
+    """Validate a session token issued to a mobile technician."""
+    user = require_dashboard_user(credentials)
+    if user.get("role") != "Tecnico":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El token no corresponde a una sesión móvil de técnico",
+        )
+    return user

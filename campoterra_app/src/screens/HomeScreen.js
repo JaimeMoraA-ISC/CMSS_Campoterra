@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { getDashboardStats } from '../services/api';
+import { clearMobileSession, getDashboardStats } from '../services/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen({ navigation, route }) {
@@ -63,7 +63,10 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.headerSubtitle}>MANTENIMIENTO</Text>
               <Text style={[styles.headerTitle, { fontSize: isTablet ? 32 : 28 }]}>Panel Principal</Text>
             </View>
-            <TouchableOpacity style={styles.logoutBtn} onPress={() => navigation.replace('Login')}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={() => {
+              clearMobileSession();
+              navigation.replace('Login');
+            }}>
               <Ionicons name="log-out-outline" size={24} color="#0b1528" />
             </TouchableOpacity>
           </View>

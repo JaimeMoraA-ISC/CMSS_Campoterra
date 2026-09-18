@@ -56,7 +56,7 @@ export default function LoginScreen({ navigation }) {
 
     setIsLoading(true);
     try {
-      const response = await startShift(tecnico.nombre, turno.etiqueta);
+      const response = await startShift(tecnico, turno);
       console.log('Jornada iniciada:', response);
       navigation.replace('Home', { 
         nombreTecnico: tecnico.nombre,
